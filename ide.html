@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neote IDE — Official Language Studio</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for VS Code style icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter & Fira Code -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        neote: {
+                            bg: '#09090b',
+                            sidebar: '#0e0e12',
+                            editor: '#121217',
+                            panel: '#0c0c10',
+                            border: '#1f1f28',
+                            accent: '#9333ea',
+                            accentHover: '#a855f7',
+                            accentDim: 'rgba(147, 51, 234, 0.15)',
+                            text: '#e4e4e7',
+                            muted: '#71717a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9333ea;
+        }
+
+        /* Editor Overlay Architecture for Syntax & Error Highlighting */
+        .editor-container {
+            position: relative;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        #code-input, #code-backdrop {
+            margin: 0;
+            padding: 16px;
+            border: 0;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            letter-spacing: 0px;
+            tab-size: 4;
+            white-space: pre;
+            overflow: auto;
+        }
+
+        #code-input {
+            color: transparent;
+            background: transparent;
+            caret-color: #c084fc;
+            z-index: 2;
+            resize: none;
+            outline: none;
+        }
+
+        #code-backdrop {
+            z-index: 1;
+            pointer-events: none;
+            color: #e4e4e7;
+        }
+
+        /* Syntax Highlighting Colors */
+        .tok-keyword { color: #c084fc; font-weight: 500; }
+        .tok-ui { color: #38bdf8; font-weight: 500; }
+        .tok-func { color: #f472b6; }
+        .tok-string { color: #a3e635; }
+        .tok-number { color: #fb923c; }
+        .tok-comment { color: #52525b; font-style: italic; }
+        .tok-op { color: #e879f9; }
+        
+        /* Wavy Error Underline */
+        .tok-error {
+            text-decoration: underline wavy #ef4444;
+            background-color: rgba(239, 68, 68, 0.15);
+            border-radius: 2px;
+        }
+
+        /* Line Numbers */
+        .line-numbers {
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 16px 8px;
+            user-select: none;
+            text-align: right;
+            color: #52525b;
+            background-color: #0e0e12;
+            border-right: 1px solid #1f1f28;
+            min-width: 48px;
+        }
+
+        .line-error-marker {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        /* VS Code Style Draggable Resizer Handles */
+        .resizer-v {
+            width: 4px;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.15s ease;
+            z-index: 20;
+            flex-shrink: 0;
+        }
+        .resizer-v:hover, .resizer-v.dragging {
+            background: #9333ea;
+        }
+
+        .resizer-h {
+            height: 4px;
+            cursor: row-resize;
+            background: transparent;
+            transition: background 0.15s ease;
+            z-index: 20;
+            flex-shrink: 0;
+        }
+        .resizer-h:hover, .resizer-h.dragging {
+            background: #9333ea;
+        }
+    </style>
+</head>
+<body class="bg-neote-bg text-neote-text h-screen w-screen overflow-hidden flex flex-col select-none">
+
+    <!-- Top Title Bar -->
+    <header class="h-10 bg-neote-sidebar border-b border-neote-border flex items-center justify-between px-4 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 text-purple-400 font-bold tracking-wider">
+                <i class="fa-solid fa-code-branch text-purple-500"></i>
+                <span>NEOTE <span class="text-xs bg-purple-900/50 text-purple-300 px-1.5 py-0.5 rounded border border-purple-700/50">STUDIO v1.3</span></span>
+            </div>
+            <span class="text-neote-border">|</span>
+            <span id="current-file-breadcrumb" class="text-xs text-neote-muted font-mono hidden sm:inline">workspace / app.neote</span>
+        </div>
+
+        <!-- Center Action Controls -->
+        <div class="flex items-center gap-2">
+            <button onclick="runNeoteCode()" class="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium px-3 py-1.5 rounded shadow-lg shadow-purple-900/30 transition">
+                <i class="fa-solid fa-play text-[10px]"></i> Run Code
+            </button>
+            <button onclick="openPhraseModal()" class="flex items-center gap-1.5 bg-neote-editor hover:bg-zinc-800 text-purple-300 border border-purple-800/50 text-xs font-medium px-3 py-1.5 rounded transition">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden md:inline">Custom Phrases</span>
+            </button>
+            <button onclick="openDocsModal()" class="flex items-center gap-1.5 bg-neote-editor hover:bg-zinc-800 text-zinc-300 border border-neote-border text-xs font-medium px-3 py-1.5 rounded transition">
+                <i class="fa-solid fa-book"></i> <span class="hidden md:inline">Syntax Guide</span>
+            </button>
+        </div>
+
+        <!-- Panel Layout Toggles & Status -->
+        <div class="flex items-center gap-2 text-xs text-neote-muted">
+            <div class="flex items-center bg-neote-editor border border-neote-border rounded p-0.5 gap-0.5" title="Toggle Workspace Panels">
+                <button id="toggle-sidebar-btn" onclick="togglePanel('sidebar')" class="px-2 py-1 rounded text-purple-400 bg-purple-900/30 hover:bg-purple-900/50 transition" title="Collapse/Expand Sidebar">
+                    <i class="fa-solid fa-table-columns"></i>
+                </button>
+                <button id="toggle-terminal-btn" onclick="togglePanel('terminal')" class="px-2 py-1 rounded text-purple-400 bg-purple-900/30 hover:bg-purple-900/50 transition" title="Collapse/Expand Terminal">
+                    <i class="fa-solid fa-terminal"></i>
+                </button>
+                <button id="toggle-output-btn" onclick="togglePanel('output')" class="px-2 py-1 rounded text-purple-400 bg-purple-900/30 hover:bg-purple-900/50 transition" title="Collapse/Expand Live Output">
+                    <i class="fa-solid fa-display"></i>
+                </button>
+            </div>
+
+            <span id="error-badge" class="hidden items-center gap-1 text-red-400 bg-red-950/50 px-2 py-0.5 rounded border border-red-800/50">
+                <i class="fa-solid fa-circle-exclamation"></i> <span id="error-count">0</span>
+            </span>
+        </div>
+    </header>
+
+    <!-- Main IDE Workspace -->
+    <div id="ide-workspace" class="flex-1 flex overflow-hidden">
+        
+        <!-- Far Left Activity Bar (VS Code Style) -->
+        <aside class="w-12 bg-neote-sidebar border-r border-neote-border flex flex-col items-center py-3 gap-4 shrink-0">
+            <button onclick="switchSidebarTab('explorer')" id="tab-btn-explorer" class="w-9 h-9 rounded flex items-center justify-center text-purple-400 bg-neote-accentDim border-l-2 border-purple-500 transition" title="Explorer (Click to Toggle)">
+                <i class="fa-regular fa-copy text-lg"></i>
+            </button>
+            <button onclick="switchSidebarTab('components')" id="tab-btn-components" class="w-9 h-9 rounded flex items-center justify-center text-neote-muted hover:text-zinc-200 transition" title="Component Snippets">
+                <i class="fa-solid fa-cubes text-lg"></i>
+            </button>
+            <button onclick="openPhraseModal()" class="w-9 h-9 rounded flex items-center justify-center text-neote-muted hover:text-purple-400 transition" title="addPhrase() Compiler Rules">
+                <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+            </button>
+        </aside>
+
+        <!-- Secondary Sidebar (File Explorer / Component Library) -->
+        <aside id="sidebar-panel" style="width: 250px;" class="bg-neote-sidebar border-r border-neote-border flex flex-col shrink-0 overflow-hidden">
+            
+            <!-- EXPLORER VIEW -->
+            <div id="sidebar-explorer" class="flex-1 flex flex-col overflow-hidden">
+                <div class="h-9 px-3 border-b border-neote-border flex items-center justify-between shrink-0">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-neote-muted">Explorer</span>
+                    <div class="flex items-center gap-1">
+                        <button onclick="createNewItem('file')" class="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-purple-400" title="New Neote File">
+                            <i class="fa-solid fa-file-circle-plus text-xs"></i>
+                        </button>
+                        <button onclick="createNewItem('folder')" class="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-purple-400" title="New Folder">
+                            <i class="fa-solid fa-folder-plus text-xs"></i>
+                        </button>
+                        <button onclick="togglePanel('sidebar')" class="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white" title="Collapse Sidebar">
+                            <i class="fa-solid fa-angles-left text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="file-tree" class="flex-1 overflow-y-auto p-2 space-y-0.5 text-sm">
+                    <!-- File tree injected dynamically -->
+                </div>
+                <div class="p-2 border-t border-neote-border text-[11px] text-neote-muted flex justify-between items-center shrink-0">
+                    <span>Storage: Local</span>
+                    <button onclick="resetWorkspacePrompt()" class="text-red-400 hover:underline">Reset</button>
+                </div>
+            </div>
+
+            <!-- COMPONENT PALETTE VIEW -->
+            <div id="sidebar-components" class="hidden flex-1 flex-col overflow-hidden">
+                <div class="h-9 px-3 border-b border-neote-border flex items-center justify-between shrink-0">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-neote-muted">UI & Logic Blocks</span>
+                    <button onclick="togglePanel('sidebar')" class="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white" title="Collapse Sidebar">
+                        <i class="fa-solid fa-angles-left text-xs"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
+                    <p class="text-neote-muted mb-2">Click to insert into editor:</p>
+                    
+                    <div class="text-[10px] font-bold text-purple-400 uppercase mt-2">UI Elements</div>
+                    <button onclick="insertSnippet('$button(&quot;Click Me&quot;, &quot;btn-primary&quot;)')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-sky-400">$button(text, class)</div>
+                        <div class="text-neote-muted text-[10px]">Interactive button element</div>
+                    </button>
+                    <button onclick="insertSnippet('$(&quot;Container Box&quot;, &quot;card&quot;)')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-sky-400">$(text, class)</div>
+                        <div class="text-neote-muted text-[10px]">Div container block</div>
+                    </button>
+                    <button onclick="insertSnippet('$p(&quot;Paragraph text here&quot;, &quot;text-body&quot;)')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-sky-400">$p(text, class)</div>
+                        <div class="text-neote-muted text-[10px]">Paragraph text element</div>
+                    </button>
+                    <button onclick="insertSnippet('$input(&quot;Enter name...&quot;, &quot;userInput&quot;, &quot;input-box&quot;)')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-sky-400">$input(placeholder, var, class)</div>
+                        <div class="text-neote-muted text-[10px]">Text input bound to variable</div>
+                    </button>
+
+                    <div class="text-[10px] font-bold text-purple-400 uppercase mt-3">Media & Modals</div>
+                    <button onclick="insertSnippet('img(&quot;https://placehold.co/400x200/581c87/ffffff?text=Neote+Media&quot;)')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-pink-400">img(link)</div>
+                        <div class="text-neote-muted text-[10px]">Embed responsive image</div>
+                    </button>
+                    <button onclick="insertSnippet('cover(&quot;Hello from Neote!&quot;)')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-pink-400">cover(text)</div>
+                        <div class="text-neote-muted text-[10px]">Modal alert popup</div>
+                    </button>
+                    <button onclick="insertSnippet('st answer = qstn(&quot;What is your name?&quot;)')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-pink-400">qstn(text)</div>
+                        <div class="text-neote-muted text-[10px]">Prompt user for input</div>
+                    </button>
+
+                    <div class="text-[10px] font-bold text-purple-400 uppercase mt-3">Logic & Styling</div>
+                    <button onclick="insertSnippet('st card = {\n    background: #1e1b4b;\n    padding: 16px;\n    border-radius: 8px;\n}')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-purple-400">st class = { ... }</div>
+                        <div class="text-neote-muted text-[10px]">CSS Style block</div>
+                    </button>
+                    <button onclick="insertSnippet('if(x => 10) {\n    cover(&quot;Matched!&quot;)\n} else {\n    cover(&quot;Not matched&quot;)\n}')" class="w-full text-left p-2 rounded bg-neote-editor hover:border-purple-500 border border-neote-border transition">
+                        <div class="font-mono text-purple-400">if(val => val) {}</div>
+                        <div class="text-neote-muted text-[10px]">Neote equality condition</div>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Vertical Resizer: Sidebar <-> Center Editor -->
+        <div id="resizer-sidebar" class="resizer-v" title="Drag to resize sidebar"></div>
+
+        <!-- Center Code Editor Column -->
+        <main class="flex-1 flex flex-col bg-neote-editor min-w-0 relative">
+            <!-- Open Tabs Bar -->
+            <div class="h-9 bg-neote-sidebar border-b border-neote-border flex items-center justify-between px-1 shrink-0">
+                <div id="editor-tabs" class="flex items-center overflow-x-auto gap-1">
+                    <!-- Tabs injected dynamically -->
+                </div>
+                <div class="flex items-center gap-1 pr-2">
+                    <button id="restore-terminal-pill" onclick="togglePanel('terminal')" class="hidden text-[10px] bg-zinc-800 hover:bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded border border-neote-border">
+                        <i class="fa-solid fa-terminal mr-1"></i> Show Terminal
+                    </button>
+                    <button id="restore-output-pill" onclick="togglePanel('output')" class="hidden text-[10px] bg-zinc-800 hover:bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded border border-neote-border">
+                        <i class="fa-solid fa-display mr-1"></i> Show Output
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editor Area with Line Numbers & Autocomplete -->
+            <div class="flex-1 flex relative overflow-hidden min-h-[120px]">
+                <div id="line-numbers" class="line-numbers overflow-hidden">1</div>
+                
+                <div class="editor-container flex-1 h-full overflow-hidden">
+                    <pre id="code-backdrop" aria-hidden="true"></pre>
+                    <textarea id="code-input" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="// Write your Neote code here..."></textarea>
+                </div>
+
+                <!-- Floating Autocomplete Popup -->
+                <div id="autocomplete-popup" class="hidden absolute z-50 w-72 bg-neote-sidebar border border-purple-600/60 rounded-md shadow-2xl overflow-hidden text-xs">
+                    <div class="bg-purple-950/60 px-2.5 py-1 text-[10px] font-semibold text-purple-300 border-b border-purple-800/40 flex justify-between">
+                        <span>NEOTE AUTOCOMPLETE</span>
+                        <span>TAB / ENTER</span>
+                    </div>
+                    <ul id="autocomplete-list" class="max-h-48 overflow-y-auto divide-y divide-neote-border/50">
+                        <!-- Suggestions injected here -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Horizontal Resizer: Editor <-> Bottom Terminal -->
+            <div id="resizer-terminal" class="resizer-h" title="Drag to resize terminal"></div>
+
+            <!-- Bottom Diagnostics & Terminal Panel -->
+            <div id="terminal-panel" style="height: 180px;" class="bg-neote-panel border-t border-neote-border flex flex-col shrink-0 overflow-hidden">
+                <div class="h-8 px-3 border-b border-neote-border flex items-center justify-between bg-neote-sidebar shrink-0">
+                    <div class="flex items-center gap-4 text-xs">
+                        <button onclick="switchBottomTab('console')" id="btab-console" class="text-purple-400 font-medium border-b-2 border-purple-500 h-8 flex items-center gap-1.5">
+                            <i class="fa-solid fa-terminal text-[10px]"></i> Terminal Logs
+                        </button>
+                        <button onclick="switchBottomTab('problems')" id="btab-problems" class="text-neote-muted hover:text-zinc-200 h-8 flex items-center gap-1.5">
+                            <i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Problems <span id="prob-count-pill" class="bg-zinc-800 px-1.5 rounded-full text-[10px]">0</span>
+                        </button>
+                        <button onclick="switchBottomTab('compiled')" id="btab-compiled" class="text-neote-muted hover:text-zinc-200 h-8 flex items-center gap-1.5">
+                            <i class="fa-solid fa-code text-[10px]"></i> Compiled JS/HTML
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="clearConsole()" class="text-xs text-neote-muted hover:text-zinc-200 flex items-center gap-1" title="Clear Logs">
+                            <i class="fa-solid fa-ban text-[10px]"></i> Clear
+                        </button>
+                        <button onclick="togglePanel('terminal')" class="text-xs text-neote-muted hover:text-white p-1" title="Collapse Terminal">
+                            <i class="fa-solid fa-chevron-down text-[11px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Terminal Console Output -->
+                <div id="bottom-console" class="flex-1 p-3 overflow-y-auto font-mono text-xs space-y-1.5 select-text">
+                    <div class="text-neote-muted italic">// Terminal ready. Runtime logs and errors appear here...</div>
+                </div>
+
+                <!-- Problems / Error List -->
+                <div id="bottom-problems" class="hidden flex-1 p-3 overflow-y-auto font-mono text-xs space-y-1.5">
+                    <div class="text-emerald-400">No syntax errors detected in current file.</div>
+                </div>
+
+                <!-- Compiled Code Viewer -->
+                <div id="bottom-compiled" class="hidden flex-1 p-3 overflow-y-auto font-mono text-xs text-purple-300 whitespace-pre select-text">
+                    // Run your code to inspect the generated HTML, CSS & JS output.
+                </div>
+            </div>
+        </main>
+
+        <!-- Vertical Resizer: Center Editor <-> Right Output Stage -->
+        <div id="resizer-output" class="resizer-v" title="Drag to resize output panel"></div>
+
+        <!-- Right Live Output & Component Inspector Panel -->
+        <section id="output-panel" style="width: 38%;" class="bg-neote-sidebar border-l border-neote-border flex flex-col shrink-0 overflow-hidden">
+            <!-- Output Header Toolbar -->
+            <div class="h-9 px-3 border-b border-neote-border flex items-center justify-between bg-neote-sidebar shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-display"></i> Live Stage
+                    </span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button id="inspect-toggle-btn" onclick="toggleInspectMode()" class="px-2 py-1 rounded text-xs bg-neote-editor hover:bg-zinc-800 text-zinc-300 border border-neote-border flex items-center gap-1 transition" title="Click components on the stage to see their Neote & HTML code">
+                        <i class="fa-solid fa-arrow-pointer text-purple-400"></i> Inspect
+                    </button>
+                    <button onclick="refreshPreview()" class="p-1.5 rounded text-xs bg-neote-editor hover:bg-zinc-800 text-zinc-300 border border-neote-border transition" title="Refresh Output">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                    <button onclick="clearPreview()" class="p-1.5 rounded text-xs bg-neote-editor hover:bg-zinc-800 text-red-400 border border-neote-border transition" title="Clear Output Stage">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <button onclick="togglePanel('output')" class="p-1.5 rounded text-xs bg-neote-editor hover:bg-zinc-800 text-zinc-400 hover:text-white border border-neote-border transition" title="Collapse Output Panel">
+                        <i class="fa-solid fa-angles-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sandboxed Output Iframe -->
+            <div class="flex-1 bg-zinc-950 relative overflow-hidden">
+                <iframe id="preview-frame" class="w-full h-full border-0 bg-zinc-950" sandbox="allow-scripts allow-modals"></iframe>
+                
+                <!-- Inspect Mode Banner -->
+                <div id="inspect-banner" class="hidden absolute top-2 left-2 right-2 bg-purple-900/90 backdrop-blur border border-purple-500 text-white text-xs px-3 py-1.5 rounded shadow-lg flex items-center justify-between">
+                    <span><i class="fa-solid fa-crosshairs mr-1.5"></i> Click any UI element below to inspect its code</span>
+                    <button onclick="toggleInspectMode()" class="text-purple-200 hover:text-white font-bold">✕</button>
+                </div>
+            </div>
+
+            <!-- Component Code Inspector Drawer -->
+            <div id="inspector-drawer" class="h-44 bg-neote-panel border-t border-purple-800/50 flex flex-col shrink-0">
+                <div class="h-7 px-3 bg-purple-950/30 border-b border-neote-border flex items-center justify-between shrink-0">
+                    <span class="text-[11px] font-semibold text-purple-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i> Component Inspector
+                    </span>
+                    <span id="inspected-tag-badge" class="text-[10px] font-mono bg-purple-900/60 text-purple-200 px-1.5 rounded">None Selected</span>
+                </div>
+                <div id="inspector-content" class="flex-1 p-3 overflow-y-auto font-mono text-xs space-y-2 select-text">
+                    <p class="text-neote-muted italic font-sans">Toggle "Inspect" above and click any rendered UI component ($button, $p, img, etc.) to view its Neote source line and compiled HTML/CSS.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Custom Modal for File/Folder Creation, Renaming, and Regrouping -->
+    <div id="dialog-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-neote-sidebar border border-purple-700/60 rounded-lg w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="px-4 py-3 bg-neote-editor border-b border-neote-border flex justify-between items-center">
+                <h3 id="dialog-title" class="text-sm font-semibold text-purple-300">Modal Title</h3>
+                <button onclick="closeDialog()" class="text-neote-muted hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="dialog-body" class="p-4 space-y-3 text-sm">
+                <!-- Dynamic form inputs -->
+            </div>
+            <div class="px-4 py-3 bg-neote-editor border-t border-neote-border flex justify-end gap-2">
+                <button onclick="closeDialog()" class="px-3 py-1.5 rounded text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Cancel</button>
+                <button id="dialog-confirm-btn" class="px-3 py-1.5 rounded text-xs bg-purple-600 hover:bg-purple-500 text-white font-medium">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Phrase Manager Modal (addPhrase) -->
+    <div id="phrase-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-neote-sidebar border border-purple-700/60 rounded-lg w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-4 py-3 bg-neote-editor border-b border-neote-border flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+                    <h3 class="text-sm font-semibold text-white">Neote Phrase Extender — <code class="text-purple-400">addPhrase(phrase, value)</code></h3>
+                </div>
+                <button onclick="closePhraseModal()" class="text-neote-muted hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto space-y-4 text-xs">
+                <p class="text-zinc-300 leading-relaxed">
+                    Define custom Neote language phrases and map them directly to JavaScript! Use <code class="text-purple-400">$1</code>, <code class="text-purple-400">$2</code> as argument placeholders, or define direct token replacements. You can also call <code class="text-purple-400">addPhrase("myCmd()", "console.log('hi')")</code> directly inside your Neote code!
+                </p>
+
+                <!-- Add New Phrase Form -->
+                <div class="bg-neote-editor p-3 rounded border border-neote-border grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                    <div class="sm:col-span-5">
+                        <label class="block text-[10px] uppercase text-neote-muted mb-1">Neote Phrase Pattern</label>
+                        <input id="new-phrase-key" type="text" placeholder="e.g. shout($1)" class="w-full bg-neote-bg border border-neote-border rounded px-2.5 py-1.5 font-mono text-purple-300 focus:border-purple-500 outline-none">
+                    </div>
+                    <div class="sm:col-span-5">
+                        <label class="block text-[10px] uppercase text-neote-muted mb-1">Translates To (JS)</label>
+                        <input id="new-phrase-val" type="text" placeholder="e.g. alert($1.toUpperCase())" class="w-full bg-neote-bg border border-neote-border rounded px-2.5 py-1.5 font-mono text-emerald-300 focus:border-purple-500 outline-none">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <button onclick="registerPhraseFromUI()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-1.5 px-3 rounded transition">
+                            + Add
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Phrase Registry Table -->
+                <div>
+                    <h4 class="text-[11px] font-semibold uppercase text-neote-muted mb-2">Active Phrase Dictionary</h4>
+                    <div class="border border-neote-border rounded overflow-hidden">
+                        <table class="w-full text-left font-mono">
+                            <thead class="bg-neote-editor text-neote-muted text-[10px] uppercase border-b border-neote-border">
+                                <tr>
+                                    <th class="py-2 px-3">Neote Phrase</th>
+                                    <th class="py-2 px-3">Compiles To (JS)</th>
+                                    <th class="py-2 px-3 w-16 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="phrase-table-body" class="divide-y divide-neote-border">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Documentation Modal -->
+    <div id="docs-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-neote-sidebar border border-purple-700/60 rounded-lg w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-4 py-3 bg-neote-editor border-b border-neote-border flex justify-between items-center">
+                <h3 class="text-sm font-semibold text-purple-300"><i class="fa-solid fa-book-open mr-2"></i>Neote Language Reference & Rules</h3>
+                <button onclick="closeDocsModal()" class="text-neote-muted hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-4 text-xs font-mono">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-neote-editor p-3 rounded border border-neote-border">
+                        <div class="text-purple-400 font-bold mb-1.5 font-sans">Core & Variables</div>
+                        <div class="space-y-1 text-zinc-300">
+                            <div><span class="text-purple-400">st</span> name = "Neote" → variable</div>
+                            <div><span class="text-pink-400">eval("2 + 2")</span> → evaluate math</div>
+                            <div><span class="text-pink-400">addPhrase(p, v)</span> → custom syntax</div>
+                            <div><span class="text-pink-400">keep(k, v)</span> / <span class="text-pink-400">grab(k)</span> → storage</div>
+                        </div>
+                    </div>
+                    <div class="bg-neote-editor p-3 rounded border border-neote-border">
+                        <div class="text-purple-400 font-bold mb-1.5 font-sans">Modals & Media</div>
+                        <div class="space-y-1 text-zinc-300">
+                            <div><span class="text-pink-400">cover("Hi")</span> → alert popup</div>
+                            <div><span class="text-pink-400">qstn("Age?")</span> → prompt input</div>
+                            <div><span class="text-pink-400">img(url)</span> → &lt;img&gt; element</div>
+                            <div><span class="text-pink-400">vid(url)</span> / <span class="text-pink-400">aud(url)</span> → media</div>
+                        </div>
+                    </div>
+                    <div class="bg-neote-editor p-3 rounded border border-neote-border">
+                        <div class="text-purple-400 font-bold mb-1.5 font-sans">Operations & Loops (Expanded)</div>
+                        <div class="space-y-1 text-zinc-300">
+                            <div><span class="text-purple-400">if(a => b) {}</span> → equality check (a == b)</div>
+                            <div><span class="text-purple-400">else if(a => b) {}</span> → else if</div>
+                            <div><span class="text-purple-400">else {}</span> → fallback branch</div>
+                            <div><span class="text-purple-400">repeat(5) {}</span> → loop N times</div>
+                        </div>
+                    </div>
+                    <div class="bg-neote-editor p-3 rounded border border-neote-border">
+                        <div class="text-purple-400 font-bold mb-1.5 font-sans">UI Elements & Events</div>
+                        <div class="space-y-1 text-zinc-300">
+                            <div><span class="text-sky-400">$button(text, class)</span> → &lt;button&gt;</div>
+                            <div><span class="text-sky-400">$(text, class)</span> → &lt;div&gt;</div>
+                            <div><span class="text-sky-400">$p(text, class)</span> → &lt;p&gt;</div>
+                            <div><span class="text-sky-400">$footer(text, class)</span> → &lt;footer&gt;</div>
+                            <div><span class="text-purple-400">on click("class") {}</span> → click event</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-neote-editor p-3 rounded border border-neote-border">
+                    <div class="text-purple-400 font-bold mb-1.5 font-sans">CSS Class Styling & Storage</div>
+                    <pre class="text-zinc-300">st my-btn = {
+    background: #9333ea;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+}
+keep("score", 100) // Save data
+st saved = grab("score") // Load data</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================================================
+           1. STATE & LOCALSTORAGE FILE SYSTEM MANAGER
+           ========================================================================= */
+        const STORAGE_KEY_FILES = 'neote_ide_filesystem_v2';
+        const STORAGE_KEY_PHRASES = 'neote_ide_phrases_v2';
+
+        const DEFAULT_CODE = `// Welcome to Neote IDE!
+// Press Ctrl+Enter or click "Run Code" to see it live.
+
+st appTitle = "Neote Interactive App"
+st clicks = 0
+
+// Define CSS styles using 'st class = { ... }'
+st hero-box = {
+    background: linear-gradient(135deg, #1e1b4b, #3b0764);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #7e22ce;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+st title-text = {
+    font-size: 20px;
+    font-weight: bold;
+    color: #f3e8ff;
+    margin-bottom: 8px;
+}
+
+st neon-btn = {
+    background: #9333ea;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+st status-text = {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #c084fc;
+}
+
+st footer-bar = {
+    margin-top: 24px;
+    font-size: 12px;
+    color: #a1a1aa;
+    text-align: center;
+}
+
+// Build UI Components
+$(appTitle, "hero-box")
+$p("Click the button below to test Neote logic & events:", "title-text")
+$button("Increment Counter", "neon-btn")
+$p("Clicks: 0", "status-text")
+
+// Interactive Event Listener
+on click("neon-btn") {
+    clicks = eval(clicks + 1)
+    console.log("Button clicked! Total: " + clicks)
+    
+    if(clicks => 5) {
+        cover("Awesome! You reached 5 clicks!")
+    } else if(clicks => 3) {
+        console.log("Getting closer to 5...")
+    } else {
+        console.log("Keep clicking!")
+    }
+}
+
+// Register a custom phrase on the fly
+addPhrase("greetUser()", "console.log('Welcome to custom Neote phrases!')")
+greetUser()
+
+$footer("Built with Neote Language", "footer-bar")`;
+
+        let fileSystem = [];
+        let activeFileId = null;
+        let openTabs = [];
+        let customPhrases = [];
+        let inspectMode = false;
+        let lastCompiledBundle = { html: '', css: '', js: '', sourceMap: [] };
+
+        // Panel visibility & sizing state
+        const panelState = {
+            sidebar: { collapsed: false, lastWidth: '250px' },
+            terminal: { collapsed: false, lastHeight: '180px' },
+            output: { collapsed: false, lastWidth: '38%' }
+        };
+
+        // Default built-in + user phrases for addPhrase(phrase, value)
+        const DEFAULT_PHRASES = [
+            { id: 'p2', phrase: 'cover($1)', value: 'alert($1)', builtin: true },
+            { id: 'p3', phrase: 'qstn($1)', value: 'prompt($1)', builtin: true },
+            { id: 'p4', phrase: 'keep($1, $2)', value: 'localStorage.setItem($1, JSON.stringify($2))', builtin: true },
+            { id: 'p5', phrase: 'grab($1)', value: 'JSON.parse(localStorage.getItem($1) || "null")', builtin: true }
+        ];
+
+        function initApp() {
+            // Load Phrases (filter out any legacy showcase rule)
+            const savedPhrases = localStorage.getItem(STORAGE_KEY_PHRASES);
+            if (savedPhrases) {
+                try {
+                    customPhrases = JSON.parse(savedPhrases).filter(p => !p.phrase.startsWith('showcase'));
+                } catch (e) {
+                    customPhrases = [...DEFAULT_PHRASES];
+                }
+            } else {
+                customPhrases = [...DEFAULT_PHRASES];
+                savePhrases();
+            }
+
+            // Load File System
+            const savedFS = localStorage.getItem(STORAGE_KEY_FILES);
+            if (savedFS) {
+                try {
+                    fileSystem = JSON.parse(savedFS);
+                } catch (e) {
+                    seedDefaultWorkspace();
+                }
+            } else {
+                seedDefaultWorkspace();
+            }
+
+            if (fileSystem.length === 0) seedDefaultWorkspace();
+
+            // Open first file found
+            const firstFile = fileSystem.find(item => item.type === 'file');
+            if (firstFile) {
+                openFile(firstFile.id);
+            }
+
+            initResizers();
+            renderFileTree();
+            renderPhraseTable();
+            runNeoteCode();
+        }
+
+        function seedDefaultWorkspace() {
+            fileSystem = [
+                { id: 'folder-src', name: 'src', type: 'folder', parentId: null, expanded: true },
+                { id: 'file-main', name: 'app.neote', type: 'file', parentId: 'folder-src', content: DEFAULT_CODE },
+                { id: 'file-media', name: 'media_demo.neote', type: 'file', parentId: 'folder-src', content: `// Media & Math Demo\nconsole.log("Calculating 25 * 4:")\nst result = eval(25 * 4)\nconsole.log(result)\n\nimg("https://placehold.co/420x180/3b0764/e9d5ff?text=Neote+Media+Engine")\n$p("Above image rendered using img(link)", "caption")\n\nst caption = {\n    color: #c084fc;\n    font-size: 13px;\n    margin-top: 8px;\n}` }
+            ];
+            saveFileSystem();
+        }
+
+        function saveFileSystem() {
+            localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(fileSystem));
+        }
+
+        function savePhrases() {
+            localStorage.setItem(STORAGE_KEY_PHRASES, JSON.stringify(customPhrases));
+        }
+
+        /* =========================================================================
+           2. FILE EXPLORER (CREATE, RENAME, DELETE, REGROUP/MOVE)
+           ========================================================================= */
+        function renderFileTree() {
+            const container = document.getElementById('file-tree');
+            container.innerHTML = '';
+
+            // Render root folders first, then root files
+            const rootItems = fileSystem.filter(i => !i.parentId);
+            const folders = rootItems.filter(i => i.type === 'folder');
+            const rootFiles = rootItems.filter(i => i.type === 'file');
+
+            folders.forEach(folder => {
+                const folderEl = createTreeItemElement(folder, 0);
+                container.appendChild(folderEl);
+
+                if (folder.expanded) {
+                    const children = fileSystem.filter(i => i.parentId === folder.id);
+                    children.forEach(child => {
+                        container.appendChild(createTreeItemElement(child, 1));
+                    });
+                }
+            });
+
+            rootFiles.forEach(file => {
+                container.appendChild(createTreeItemElement(file, 0));
+            });
+        }
+
+        function createTreeItemElement(item, depth) {
+            const div = document.createElement('div');
+            const isActive = item.id === activeFileId;
+            div.className = `group flex items-center justify-between px-2 py-1 rounded cursor-pointer text-xs transition ${
+                isActive ? 'bg-purple-900/40 text-purple-200 border border-purple-700/40' : 'text-zinc-300 hover:bg-zinc-800/70'
+            }`;
+            div.style.paddingLeft = `${depth * 14 + 8}px`;
+
+            const left = document.createElement('div');
+            left.className = 'flex items-center gap-2 truncate flex-1';
+            if (item.type === 'folder') {
+                left.innerHTML = `<i class="fa-solid ${item.expanded ? 'fa-chevron-down' : 'fa-chevron-right'} text-[9px] text-neote-muted w-2.5"></i>
+                                  <i class="fa-solid ${item.expanded ? 'fa-folder-open' : 'fa-folder'} text-purple-400"></i>
+                                  <span class="truncate font-medium">${escapeHtml(item.name)}</span>`;
+                left.onclick = () => {
+                    item.expanded = !item.expanded;
+                    saveFileSystem();
+                    renderFileTree();
+                };
+            } else {
+                left.innerHTML = `<i class="fa-solid fa-file-code text-sky-400 ml-3.5"></i>
+                                  <span class="truncate font-mono">${escapeHtml(item.name)}</span>`;
+                left.onclick = () => openFile(item.id);
+            }
+
+            // Hover actions: Rename, Regroup (Move), Delete
+            const actions = document.createElement('div');
+            actions.className = 'hidden group-hover:flex items-center gap-1 text-[10px] text-zinc-400';
+
+            if (item.type === 'file') {
+                const moveBtn = document.createElement('button');
+                moveBtn.innerHTML = '<i class="fa-solid fa-folder-tree hover:text-purple-400" title="Regroup / Move to Folder"></i>';
+                moveBtn.onclick = (e) => { e.stopPropagation(); promptRegroupFile(item.id); };
+                actions.appendChild(moveBtn);
+            }
+
+            const renameBtn = document.createElement('button');
+            renameBtn.innerHTML = '<i class="fa-solid fa-pen hover:text-sky-400" title="Rename"></i>';
+            renameBtn.onclick = (e) => { e.stopPropagation(); promptRenameItem(item.id); };
+            actions.appendChild(renameBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = '<i class="fa-solid fa-trash hover:text-red-400" title="Delete"></i>';
+            delBtn.onclick = (e) => { e.stopPropagation(); promptDeleteItem(item.id); };
+            actions.appendChild(delBtn);
+
+            div.appendChild(left);
+            div.appendChild(actions);
+            return div;
+        }
+
+        function openFile(fileId) {
+            const file = fileSystem.find(f => f.id === fileId && f.type === 'file');
+            if (!file) return;
+
+            activeFileId = fileId;
+            if (!openTabs.includes(fileId)) {
+                openTabs.push(fileId);
+            }
+
+            const editor = document.getElementById('code-input');
+            editor.value = file.content;
+            updateEditorView();
+            renderTabs();
+            renderFileTree();
+            updateBreadcrumb();
+        }
+
+        function renderTabs() {
+            const tabsBar = document.getElementById('editor-tabs');
+            tabsBar.innerHTML = '';
+
+            openTabs.forEach(tabId => {
+                const file = fileSystem.find(f => f.id === tabId);
+                if (!file) return;
+
+                const isActive = tabId === activeFileId;
+                const tab = document.createElement('div');
+                tab.className = `flex items-center gap-2 px-3 h-7 rounded-t text-xs font-mono cursor-pointer border-t border-x transition ${
+                    isActive 
+                    ? 'bg-neote-editor text-purple-300 border-neote-border border-t-purple-500' 
+                    : 'bg-neote-sidebar text-neote-muted border-transparent hover:text-zinc-200'
+                }`;
+                tab.innerHTML = `
+                    <i class="fa-solid fa-file-code text-sky-400 text-[10px]"></i>
+                    <span>${escapeHtml(file.name)}</span>
+                    <button class="ml-1 hover:text-red-400 text-[10px]" onclick="closeTab(event, '${tabId}')">✕</button>
+                `;
+                tab.onclick = () => openFile(tabId);
+                tabsBar.appendChild(tab);
+            });
+        }
+
+        function closeTab(e, tabId) {
+            e.stopPropagation();
+            openTabs = openTabs.filter(id => id !== tabId);
+            if (activeFileId === tabId) {
+                activeFileId = openTabs.length > 0 ? openTabs[openTabs.length - 1] : null;
+                if (activeFileId) {
+                    openFile(activeFileId);
+                } else {
+                    document.getElementById('code-input').value = '';
+                    updateEditorView();
+                    renderTabs();
+                    renderFileTree();
+                }
+            } else {
+                renderTabs();
+            }
+        }
+
+        function updateBreadcrumb() {
+            const bc = document.getElementById('current-file-breadcrumb');
+            const file = fileSystem.find(f => f.id === activeFileId);
+            if (!file) {
+                bc.textContent = 'workspace / no file open';
+                return;
+            }
+            const parent = fileSystem.find(f => f.id === file.parentId);
+            bc.textContent = parent ? `workspace / ${parent.name} / ${file.name}` : `workspace / ${file.name}`;
+        }
+
+        // Dialog Helpers for File Operations
+        function createNewItem(type) {
+            const folders = fileSystem.filter(i => i.type === 'folder');
+            let folderOptions = `<option value="">Root Workspace</option>`;
+            folders.forEach(f => {
+                folderOptions += `<option value="${f.id}">${escapeHtml(f.name)}</option>`;
+            });
+
+            showDialog(
+                type === 'file' ? 'Create New Neote File' : 'Create New Folder',
+                `<div>
+                    <label class="block text-xs text-neote-muted mb-1">Name</label>
+                    <input id="dlg-input-name" type="text" placeholder="${type === 'file' ? 'script.neote' : 'components'}" class="w-full bg-neote-bg border border-neote-border rounded px-3 py-1.5 text-white font-mono text-xs focus:border-purple-500 outline-none">
+                </div>
+                ${type === 'file' ? `
+                <div>
+                    <label class="block text-xs text-neote-muted mb-1">Folder Group</label>
+                    <select id="dlg-select-folder" class="w-full bg-neote-bg border border-neote-border rounded px-3 py-1.5 text-white text-xs focus:border-purple-500 outline-none">
+                        ${folderOptions}
+                    </select>
+                </div>` : ''}`,
+                () => {
+                    let name = document.getElementById('dlg-input-name').value.trim();
+                    if (!name) return;
+                    if (type === 'file' && !name.endsWith('.neote')) name += '.neote';
+
+                    const parentId = type === 'file' ? (document.getElementById('dlg-select-folder').value || null) : null;
+                    const newItem = {
+                        id: 'item-' + Date.now(),
+                        name,
+                        type,
+                        parentId,
+                        expanded: true,
+                        content: type === 'file' ? `// ${name}\n$p("Hello from ${name}!", "greeting")\n` : undefined
+                    };
+                    fileSystem.push(newItem);
+                    saveFileSystem();
+                    renderFileTree();
+                    if (type === 'file') openFile(newItem.id);
+                    closeDialog();
+                }
+            );
+        }
+
+        function promptRenameItem(id) {
+            const item = fileSystem.find(i => i.id === id);
+            if (!item) return;
+            showDialog(
+                `Rename ${item.type === 'file' ? 'File' : 'Folder'}`,
+                `<div>
+                    <label class="block text-xs text-neote-muted mb-1">New Name</label>
+                    <input id="dlg-rename-val" type="text" value="${escapeHtml(item.name)}" class="w-full bg-neote-bg border border-neote-border rounded px-3 py-1.5 text-white font-mono text-xs focus:border-purple-500 outline-none">
+                </div>`,
+                () => {
+                    const newName = document.getElementById('dlg-rename-val').value.trim();
+                    if (newName) {
+                        item.name = newName;
+                        saveFileSystem();
+                        renderFileTree();
+                        renderTabs();
+                        updateBreadcrumb();
+                    }
+                    closeDialog();
+                }
+            );
+        }
+
+        function promptRegroupFile(fileId) {
+            const file = fileSystem.find(i => i.id === fileId);
+            if (!file) return;
+            const folders = fileSystem.filter(i => i.type === 'folder');
+            let options = `<option value="" ${!file.parentId ? 'selected' : ''}>Root Workspace (No Folder)</option>`;
+            folders.forEach(f => {
+                options += `<option value="${f.id}" ${file.parentId === f.id ? 'selected' : ''}>${escapeHtml(f.name)}</option>`;
+            });
+
+            showDialog(
+                `Regroup "${file.name}"`,
+                `<div>
+                    <label class="block text-xs text-neote-muted mb-1">Select Destination Folder</label>
+                    <select id="dlg-move-folder" class="w-full bg-neote-bg border border-neote-border rounded px-3 py-1.5 text-white text-xs focus:border-purple-500 outline-none">
+                        ${options}
+                    </select>
+                </div>`,
+                () => {
+                    const targetFolderId = document.getElementById('dlg-move-folder').value || null;
+                    file.parentId = targetFolderId;
+                    if (targetFolderId) {
+                        const folder = fileSystem.find(f => f.id === targetFolderId);
+                        if (folder) folder.expanded = true;
+                    }
+                    saveFileSystem();
+                    renderFileTree();
+                    updateBreadcrumb();
+                    closeDialog();
+                }
+            );
+        }
+
+        function promptDeleteItem(id) {
+            const item = fileSystem.find(i => i.id === id);
+            if (!item) return;
+            showDialog(
+                `Delete ${item.name}?`,
+                `<p class="text-xs text-zinc-300">Are you sure you want to delete <span class="text-purple-400 font-mono">${escapeHtml(item.name)}</span>? ${item.type === 'folder' ? 'Files inside will be moved to root.' : 'This cannot be undone.'}</p>`,
+                () => {
+                    if (item.type === 'folder') {
+                        fileSystem.forEach(f => {
+                            if (f.parentId === id) f.parentId = null;
+                        });
+                    }
+                    fileSystem = fileSystem.filter(i => i.id !== id);
+                    openTabs = openTabs.filter(t => t !== id);
+                    if (activeFileId === id) {
+                        activeFileId = openTabs[0] || null;
+                        if (activeFileId) openFile(activeFileId);
+                        else {
+                            document.getElementById('code-input').value = '';
+                            updateEditorView();
+                        }
+                    }
+                    saveFileSystem();
+                    renderFileTree();
+                    renderTabs();
+                    closeDialog();
+                }
+            );
+        }
+
+        function resetWorkspacePrompt() {
+            showDialog(
+                'Reset Workspace to Default?',
+                `<p class="text-xs text-zinc-300">This will restore the default Neote sample files and clear custom folders.</p>`,
+                () => {
+                    localStorage.removeItem(STORAGE_KEY_FILES);
+                    openTabs = [];
+                    seedDefaultWorkspace();
+                    openFile('file-main');
+                    renderFileTree();
+                    closeDialog();
+                }
+            );
+        }
+
+        /* =========================================================================
+           3. CUSTOM PHRASE SYSTEM: addPhrase(phrase, value)
+           ========================================================================= */
+        function addPhrase(phrase, value) {
+            if (!phrase || !value) return;
+            const existing = customPhrases.find(p => p.phrase === phrase);
+            if (existing) {
+                existing.value = value;
+            } else {
+                customPhrases.push({
+                    id: 'custom-' + Date.now() + Math.random().toString(36).slice(2, 6),
+                    phrase: phrase.trim(),
+                    value: value.trim(),
+                    builtin: false
+                });
+            }
+            savePhrases();
+            renderPhraseTable();
+        }
+
+        function registerPhraseFromUI() {
+            const pInput = document.getElementById('new-phrase-key');
+            const vInput = document.getElementById('new-phrase-val');
+            const p = pInput.value.trim();
+            const v = vInput.value.trim();
+            if (!p || !v) return;
+
+            addPhrase(p, v);
+            pInput.value = '';
+            vInput.value = '';
+            updateEditorView();
+        }
+
+        function deleteCustomPhrase(id) {
+            customPhrases = customPhrases.filter(p => p.id !== id);
+            savePhrases();
+            renderPhraseTable();
+            updateEditorView();
+        }
+
+        function renderPhraseTable() {
+            const tbody = document.getElementById('phrase-table-body');
+            tbody.innerHTML = '';
+            customPhrases.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-neote-editor/60';
+                tr.innerHTML = `
+                    <td class="py-2 px-3 text-purple-300">${escapeHtml(item.phrase)}</td>
+                    <td class="py-2 px-3 text-emerald-300">${escapeHtml(item.value)}</td>
+                    <td class="py-2 px-3 text-right">
+                        ${item.builtin 
+                            ? '<span class="text-[10px] text-zinc-500">Core</span>' 
+                            : `<button onclick="deleteCustomPhrase('${item.id}')" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>`}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /* =========================================================================
+           4. NEOTE COMPILER ENGINE (NEOTE -> HTML + CSS + JS) & LINTER
+           ========================================================================= */
+        function compileNeote(sourceCode) {
+            const lines = sourceCode.split('\n');
+            let cssOutput = '';
+            let htmlOutput = '';
+            let jsLines = [];
+            let errors = [];
+            let sourceMap = []; // Tracks generated UI components for Inspector
+
+            let inStyleBlock = false;
+            let currentStyleClass = '';
+            let currentStyleRules = [];
+            let braceDepth = 0;
+
+            // First pass: extract inline addPhrase("...", "...") calls so they apply immediately
+            const inlinePhraseRegex = /addPhrase\(\s*["'](.+?)["']\s*,\s*["'](.+?)["']\s*\)/g;
+            let pMatch;
+            while ((pMatch = inlinePhraseRegex.exec(sourceCode)) !== null) {
+                addPhrase(pMatch[1], pMatch[2]);
+            }
+
+            lines.forEach((rawLine, index) => {
+                const lineNum = index + 1;
+                let line = rawLine.trim();
+
+                // Skip empty lines or comments
+                if (!line || line.startsWith('//')) {
+                    jsLines.push(rawLine);
+                    return;
+                }
+
+                // Strip inline comments for parsing (preserving URLs like https://)
+                let codePart = line.replace(/(?<!:)\/\/.*$/, '').trim();
+
+                // Check unbalanced parentheses on single line
+                const openParens = (codePart.match(/\(/g) || []).length;
+                const closeParens = (codePart.match(/\)/g) || []).length;
+                if (openParens !== closeParens) {
+                    errors.push({ line: lineNum, message: `Unmatched parentheses '(' or ')' on line ${lineNum}.` });
+                }
+
+                // 1. STYLE BLOCK START: st className = {
+                const styleStartMatch = codePart.match(/^st\s+([a-zA-Z0-9_-]+)\s*=\s*\{$/);
+                if (styleStartMatch) {
+                    inStyleBlock = true;
+                    currentStyleClass = styleStartMatch[1];
+                    currentStyleRules = [];
+                    return;
+                }
+
+                // INSIDE STYLE BLOCK
+                if (inStyleBlock) {
+                    if (codePart === '}') {
+                        inStyleBlock = false;
+                        cssOutput += `.${currentStyleClass} {\n  ${currentStyleRules.join('\n  ')}\n}\n`;
+                        return;
+                    } else {
+                        if (!codePart.endsWith(';')) {
+                            errors.push({ line: lineNum, message: `Missing semicolon ';' in style block '.${currentStyleClass}'.` });
+                        }
+                        currentStyleRules.push(codePart);
+                        return;
+                    }
+                }
+
+                // Track JS block braces
+                braceDepth += (codePart.match(/\{/g) || []).length;
+                braceDepth -= (codePart.match(/\}/g) || []).length;
+
+                // Ignore addPhrase() declarations during runtime emission
+                if (codePart.startsWith('addPhrase(')) {
+                    jsLines.push(`// Registered custom phrase: ${codePart}`);
+                    return;
+                }
+
+                // 2. UI ELEMENTS: $button, $, $p, $footer, $input
+                const uiButtonMatch = codePart.match(/^\$button\(\s*(.+?)\s*,\s*["'](.+?)["']\s*\)$/);
+                if (uiButtonMatch) {
+                    const compId = `neote-comp-${lineNum}`;
+                    const textExpr = uiButtonMatch[1];
+                    const cls = uiButtonMatch[2];
+                    const htmlTag = `<button id="${compId}" data-neote-line="${lineNum}" data-neote-src="${escapeAttr(codePart)}" class="${cls} neote-inspectable"></button>`;
+                    htmlOutput += htmlTag + '\n';
+                    jsLines.push(`document.getElementById("${compId}").textContent = ${textExpr};`);
+                    sourceMap.push({ id: compId, line: lineNum, neote: codePart, html: `<button class="${cls}">${textExpr}</button>` });
+                    return;
+                }
+
+                const uiDivMatch = codePart.match(/^\$\(\s*(.+?)\s*,\s*["'](.+?)["']\s*\)$/);
+                if (uiDivMatch) {
+                    const compId = `neote-comp-${lineNum}`;
+                    const textExpr = uiDivMatch[1];
+                    const cls = uiDivMatch[2];
+                    const htmlTag = `<div id="${compId}" data-neote-line="${lineNum}" data-neote-src="${escapeAttr(codePart)}" class="${cls} neote-inspectable"></div>`;
+                    htmlOutput += htmlTag + '\n';
+                    jsLines.push(`document.getElementById("${compId}").textContent = ${textExpr};`);
+                    sourceMap.push({ id: compId, line: lineNum, neote: codePart, html: `<div class="${cls}">${textExpr}</div>` });
+                    return;
+                }
+
+                const uiPMatch = codePart.match(/^\$p\(\s*(.+?)\s*,\s*["'](.+?)["']\s*\)$/);
+                if (uiPMatch) {
+                    const compId = `neote-comp-${lineNum}`;
+                    const textExpr = uiPMatch[1];
+                    const cls = uiPMatch[2];
+                    const htmlTag = `<p id="${compId}" data-neote-line="${lineNum}" data-neote-src="${escapeAttr(codePart)}" class="${cls} neote-inspectable"></p>`;
+                    htmlOutput += htmlTag + '\n';
+                    jsLines.push(`document.getElementById("${compId}").textContent = ${textExpr};`);
+                    sourceMap.push({ id: compId, line: lineNum, neote: codePart, html: `<p class="${cls}">${textExpr}</p>` });
+                    return;
+                }
+
+                const uiFooterMatch = codePart.match(/^\$footer\(\s*(.+?)\s*,\s*["'](.+?)["']\s*\)$/);
+                if (uiFooterMatch) {
+                    const compId = `neote-comp-${lineNum}`;
+                    const textExpr = uiFooterMatch[1];
+                    const cls = uiFooterMatch[2];
+                    const htmlTag = `<footer id="${compId}" data-neote-line="${lineNum}" data-neote-src="${escapeAttr(codePart)}" class="${cls} neote-inspectable"></footer>`;
+                    htmlOutput += htmlTag + '\n';
+                    jsLines.push(`document.getElementById("${compId}").textContent = ${textExpr};`);
+                    sourceMap.push({ id: compId, line: lineNum, neote: codePart, html: `<footer class="${cls}">${textExpr}</footer>` });
+                    return;
+                }
+
+                const uiInputMatch = codePart.match(/^\$input\(\s*["'](.*?)["']\s*,\s*([a-zA-Z0-9_]+)\s*,\s*["'](.+?)["']\s*\)$/);
+                if (uiInputMatch) {
+                    const compId = `neote-comp-${lineNum}`;
+                    const placeholder = uiInputMatch[1];
+                    const varName = uiInputMatch[2];
+                    const cls = uiInputMatch[3];
+                    htmlOutput += `<input id="${compId}" data-neote-line="${lineNum}" data-neote-src="${escapeAttr(codePart)}" placeholder="${escapeAttr(placeholder)}" class="${cls} neote-inspectable" />\n`;
+                    jsLines.push(`let ${varName} = ""; document.getElementById("${compId}").addEventListener("input", (e) => { ${varName} = e.target.value; });`);
+                    sourceMap.push({ id: compId, line: lineNum, neote: codePart, html: `<input placeholder="${placeholder}" class="${cls}" />` });
+                    return;
+                }
+
+                // 3. MEDIA: img(link), vid(link), aud(link)
+                const imgMatch = codePart.match(/^img\(\s*(.+?)\s*\)$/);
+                if (imgMatch) {
+                    const compId = `neote-comp-${lineNum}`;
+                    htmlOutput += `<img id="${compId}" data-neote-line="${lineNum}" data-neote-src="${escapeAttr(codePart)}" class="neote-media neote-inspectable" alt="Neote Image" />\n`;
+                    jsLines.push(`document.getElementById("${compId}").src = ${imgMatch[1]};`);
+                    sourceMap.push({ id: compId, line: lineNum, neote: codePart, html: `<img src=${imgMatch[1]} />` });
+                    return;
+                }
+
+                const vidMatch = codePart.match(/^vid\(\s*(.+?)\s*\)$/);
+                if (vidMatch) {
+                    const compId = `neote-comp-${lineNum}`;
+                    htmlOutput += `<video id="${compId}" data-neote-line="${lineNum}" data-neote-src="${escapeAttr(codePart)}" class="neote-media neote-inspectable" controls></video>\n`;
+                    jsLines.push(`document.getElementById("${compId}").src = ${vidMatch[1]};`);
+                    sourceMap.push({ id: compId, line: lineNum, neote: codePart, html: `<video src=${vidMatch[1]} controls></video>` });
+                    return;
+                }
+
+                const audMatch = codePart.match(/^aud\(\s*(.+?)\s*\)$/);
+                if (audMatch) {
+                    const compId = `neote-comp-${lineNum}`;
+                    htmlOutput += `<audio id="${compId}" data-neote-line="${lineNum}" data-neote-src="${escapeAttr(codePart)}" class="neote-inspectable" controls></audio>\n`;
+                    jsLines.push(`document.getElementById("${compId}").src = ${audMatch[1]};`);
+                    sourceMap.push({ id: compId, line: lineNum, neote: codePart, html: `<audio src=${audMatch[1]} controls></audio>` });
+                    return;
+                }
+
+                // 4. EVENTS & LOOPS: on click("class") {}, repeat(n) {}
+                let transformedLine = codePart;
+
+                const onClickMatch = transformedLine.match(/^on\s+click\(\s*["'](.+?)["']\s*\)\s*\{$/);
+                if (onClickMatch) {
+                    jsLines.push(`document.querySelectorAll(".${onClickMatch[1]}").forEach(el => el.addEventListener("click", () => {`);
+                    return;
+                }
+
+                // Closing an `on click` block cleanly if needed (we wrap event handlers with `});` if matched)
+                const repeatMatch = transformedLine.match(/^repeat\(\s*(.+?)\s*\)\s*\{$/);
+                if (repeatMatch) {
+                    jsLines.push(`for (let _i = 0; _i < ${repeatMatch[1]}; _i++) {`);
+                    return;
+                }
+
+                // 5. OPERATIONS: if(val => val) {} and else if(val => val) {}
+                // Convert `=>` inside if / else if conditions to `==`
+                transformedLine = transformedLine.replace(/\b(else\s+if|if)\s*\((.+?)\)/g, (match, kw, cond) => {
+                    const fixedCond = cond.replace(/=>/g, '==');
+                    return `${kw} (${fixedCond})`;
+                });
+
+                // 6. VARIABLE DECLARATION: st var = val -> let var = val
+                transformedLine = transformedLine.replace(/^st\s+([a-zA-Z0-9_]+)\s*=/, 'let $1 =');
+
+                // 7. APPLY CUSTOM PHRASES (addPhrase)
+                customPhrases.forEach(pObj => {
+                    transformedLine = applyPhraseRule(transformedLine, pObj.phrase, pObj.value);
+                });
+
+                // Basic unknown command validation
+                if (/^\$[a-zA-Z0-9_]*\(/.test(codePart)) {
+                    errors.push({ line: lineNum, message: `Unknown UI tag in '${codePart}'. Valid tags: $button, $, $p, $footer, $input.` });
+                }
+
+                jsLines.push(transformedLine);
+            });
+
+            if (inStyleBlock) {
+                errors.push({ line: lines.length, message: `Unclosed style block 'st ${currentStyleClass} = {' missing '}'.` });
+            }
+            if (braceDepth !== 0) {
+                errors.push({ line: lines.length, message: `Unbalanced curly braces '{' and '}' in file.` });
+            }
+
+            // Fix event listener closing braces (`on click` opened a callback)
+            let finalJs = fixEventClosures(jsLines.join('\n'));
+
+            return {
+                html: htmlOutput,
+                css: cssOutput,
+                js: finalJs,
+                errors,
+                sourceMap
+            };
+        }
+
+        // Helper to apply custom addPhrase patterns like `shout($1)` -> `alert($1)`
+        function applyPhraseRule(line, phrasePattern, jsTemplate) {
+            if (!phrasePattern.includes('(')) {
+                // Direct token replacement
+                const escaped = phrasePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                return line.replace(new RegExp(`\\b${escaped}\\b`, 'g'), jsTemplate);
+            }
+
+            const fnName = phrasePattern.split('(')[0].trim();
+            const escapedFn = fnName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const callRegex = new RegExp(`${escapedFn}\\((.*?)\\)`, 'g');
+
+            return line.replace(callRegex, (match, argsStr) => {
+                if (!phrasePattern.includes('$1')) {
+                    return jsTemplate;
+                }
+                const args = splitArgsRespectingQuotes(argsStr);
+                let result = jsTemplate;
+                args.forEach((arg, idx) => {
+                    result = result.replace(new RegExp(`\\$${idx + 1}`, 'g'), arg.trim());
+                });
+                return result;
+            });
+        }
+
+        function splitArgsRespectingQuotes(str) {
+            if (!str.trim()) return [];
+            const args = [];
+            let current = '';
+            let inQuote = null;
+            for (let i = 0; i < str.length; i++) {
+                const ch = str[i];
+                if ((ch === '"' || ch === "'") && str[i - 1] !== '\\') {
+                    inQuote = inQuote === ch ? null : ch;
+                }
+                if (ch === ',' && !inQuote) {
+                    args.push(current);
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
+            args.push(current);
+            return args;
+        }
+
+        function fixEventClosures(jsCode) {
+            const lines = jsCode.split('\n');
+            const out = [];
+            let trackingEvent = false;
+            let depth = 0;
+
+            for (let l of lines) {
+                if (l.includes('addEventListener("click", () => {')) {
+                    trackingEvent = true;
+                    depth = 1;
+                    out.push(l);
+                    continue;
+                }
+                if (trackingEvent) {
+                    depth += (l.match(/\{/g) || []).length;
+                    depth -= (l.match(/\}/g) || []).length;
+                    if (depth === 0 && l.trim() === '}') {
+                        out.push('}));');
+                        trackingEvent = false;
+                        continue;
+                    }
+                }
+                out.push(l);
+            }
+            return out.join('\n');
+        }
+
+        /* =========================================================================
+           5. LIVE EXECUTION & SANDBOXED PREVIEW STAGE
+           ========================================================================= */
+        function runNeoteCode() {
+            const source = document.getElementById('code-input').value;
+            const compiled = compileNeote(source);
+            lastCompiledBundle = compiled;
+
+            // Update compiled tab view
+            document.getElementById('bottom-compiled').textContent =
+                `/* === COMPILED CSS === */\n${compiled.css || '/* None */'}\n\n<!-- === COMPILED HTML === -->\n${compiled.html || '<!-- None -->'}\n\n// === COMPILED JS ===\n${compiled.js}`;
+
+            // Clear previous console logs for fresh run
+            const consoleEl = document.getElementById('bottom-console');
+            consoleEl.innerHTML = '';
+
+            if (compiled.errors.length > 0) {
+                appendConsoleLog(`Compilation halted: ${compiled.errors.length} syntax error(s) found. Check Problems tab.`, 'error');
+                return;
+            }
+
+            renderStageIframe(compiled);
+        }
+
+        function renderStageIframe(compiled) {
+            const iframe = document.getElementById('preview-frame');
+            const doc = `
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    body {
+        background-color: #09090b;
+        color: #f4f4f5;
+        font-family: 'Inter', system-ui, sans-serif;
+        padding: 20px;
+        margin: 0;
+    }
+    .neote-media {
+        max-width: 100%;
+        border-radius: 8px;
+        display: block;
+        margin: 8px 0;
+    }
+    /* Inspect mode hover highlight */
+    body.inspect-active .neote-inspectable:hover {
+        outline: 2px dashed #c084fc !important;
+        outline-offset: 2px;
+        cursor: crosshair !important;
+    }
+    ${compiled.css}
+</style>
+</head>
+<body class="${inspectMode ? 'inspect-active' : ''}">
+    ${compiled.html}
+
+    <script>
+        // Bridge console.log to parent IDE
+        const _origLog = console.log;
+        console.log = function(...args) {
+            window.parent.postMessage({ type: 'NEOTE_LOG', payload: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') }, '*');
+            _origLog.apply(console, args);
+        };
+
+        window.onerror = function(msg, url, line) {
+            window.parent.postMessage({ type: 'NEOTE_ERR', payload: msg }, '*');
+        };
+
+        // Component Inspector Click Handler
+        document.addEventListener('click', function(e) {
+            if (!document.body.classList.contains('inspect-active')) return;
+            const target = e.target.closest('.neote-inspectable');
+            if (target) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.parent.postMessage({
+                    type: 'NEOTE_INSPECT',
+                    id: target.id,
+                    line: target.getAttribute('data-neote-line'),
+                    neoteSrc: target.getAttribute('data-neote-src'),
+                    outerHTML: target.outerHTML,
+                    className: target.className.replace('neote-inspectable', '').trim()
+                }, '*');
+            }
+        }, true);
+
+        try {
+            ${compiled.js}
+        } catch (err) {
+            window.parent.postMessage({ type: 'NEOTE_ERR', payload: err.message }, '*');
+        }
+    <\/script>
+</body>
+</html>`;
+            iframe.srcdoc = doc;
+        }
+
+        function refreshPreview() {
+            runNeoteCode();
+            appendConsoleLog('Stage refreshed.', 'system');
+        }
+
+        function clearPreview() {
+            const iframe = document.getElementById('preview-frame');
+            iframe.srcdoc = `<html><body style="background:#09090b;color:#52525b;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:90vh;font-size:13px;">Stage Cleared — Click Run Code to render</body></html>`;
+            document.getElementById('inspected-tag-badge').textContent = 'None Selected';
+            document.getElementById('inspector-content').innerHTML = `<p class="text-neote-muted italic font-sans">Stage cleared.</p>`;
+        }
+
+        function toggleInspectMode() {
+            inspectMode = !inspectMode;
+            const btn = document.getElementById('inspect-toggle-btn');
+            const banner = document.getElementById('inspect-banner');
+            const iframe = document.getElementById('preview-frame');
+
+            if (inspectMode) {
+                btn.classList.add('bg-purple-700', 'text-white', 'border-purple-400');
+                banner.classList.remove('hidden');
+                if (iframe.contentDocument && iframe.contentDocument.body) {
+                    iframe.contentDocument.body.classList.add('inspect-active');
+                }
+            } else {
+                btn.classList.remove('bg-purple-700', 'text-white', 'border-purple-400');
+                banner.classList.add('hidden');
+                if (iframe.contentDocument && iframe.contentDocument.body) {
+                    iframe.contentDocument.body.classList.remove('inspect-active');
+                }
+            }
+        }
+
+        // Receive messages from Sandboxed Iframe (Logs, Errors, Component Inspection)
+        window.addEventListener('message', (event) => {
+            if (!event.data || !event.data.type) return;
+
+            if (event.data.type === 'NEOTE_LOG') {
+                appendConsoleLog(event.data.payload, 'log');
+            } else if (event.data.type === 'NEOTE_ERR') {
+                appendConsoleLog(`Runtime Error: ${event.data.payload}`, 'error');
+            } else if (event.data.type === 'NEOTE_INSPECT') {
+                const { line, neoteSrc, outerHTML, className } = event.data;
+                document.getElementById('inspected-tag-badge').textContent = `Line ${line}`;
+
+                // Find matching CSS rules if any
+                let cssSnippet = '/* No custom st class styles applied */';
+                if (className && lastCompiledBundle.css) {
+                    const clsList = className.split(/\s+/);
+                    const matchedBlocks = [];
+                    clsList.forEach(c => {
+                        const rx = new RegExp(`\\.${c}\\s*\\{[\\s\\S]*?\\}`, 'g');
+                        const m = lastCompiledBundle.css.match(rx);
+                        if (m) matchedBlocks.push(m[0]);
+                    });
+                    if (matchedBlocks.length) cssSnippet = matchedBlocks.join('\n');
+                }
+
+                document.getElementById('inspector-content').innerHTML = `
+                    <div>
+                        <div class="text-[10px] uppercase text-purple-400 font-bold mb-0.5">Neote Source (Line ${line}):</div>
+                        <div class="bg-neote-editor p-2 rounded border border-neote-border text-sky-300">${escapeHtml(neoteSrc)}</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] uppercase text-emerald-400 font-bold mb-0.5">Compiled HTML:</div>
+                        <div class="bg-neote-editor p-2 rounded border border-neote-border text-zinc-300 break-all">${escapeHtml(outerHTML.replace(' neote-inspectable', ''))}</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] uppercase text-pink-400 font-bold mb-0.5">Applied CSS:</div>
+                        <pre class="bg-neote-editor p-2 rounded border border-neote-border text-purple-200">${escapeHtml(cssSnippet)}</pre>
+                    </div>
+                `;
+            }
+        });
+
+        function appendConsoleLog(msg, type = 'log') {
+            const consoleEl = document.getElementById('bottom-console');
+            const row = document.createElement('div');
+            if (type === 'error') {
+                row.className = 'text-red-400 bg-red-950/30 px-2 py-1 rounded border-l-2 border-red-500';
+                row.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1.5"></i>${escapeHtml(msg)}`;
+            } else if (type === 'system') {
+                row.className = 'text-purple-400 italic';
+                row.textContent = `> ${msg}`;
+            } else {
+                row.className = 'text-zinc-200 border-b border-neote-border/40 pb-1';
+                row.innerHTML = `<span class="text-purple-500 mr-2">❯</span>${escapeHtml(msg)}`;
+            }
+            consoleEl.appendChild(row);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('bottom-console').innerHTML = '<div class="text-neote-muted italic">// Console cleared.</div>';
+        }
+
+        /* =========================================================================
+           6. SYNTAX HIGHLIGHTING, REAL-TIME ERROR UNDERLINING & AUTOCOMPLETE
+           ========================================================================= */
+        const AUTOCOMPLETE_ITEMS = [
+            { label: 'st var = val', insert: 'st name = ', desc: 'Declare variable' },
+            { label: 'st class = {}', insert: 'st box = {\n    background: #1e1b4b;\n    padding: 12px;\n}', desc: 'CSS Style block' },
+            { label: 'cover()', insert: 'cover("")', desc: 'Modal alert popup' },
+            { label: 'qstn()', insert: 'qstn("")', desc: 'Prompt user input' },
+            { label: 'img()', insert: 'img("https://placehold.co/400x200")', desc: 'Embed image' },
+            { label: 'vid()', insert: 'vid("")', desc: 'Embed video player' },
+            { label: 'aud()', insert: 'aud("")', desc: 'Embed audio player' },
+            { label: 'if(val => val)', insert: 'if(a => b) {\n    \n}', desc: 'Equality condition' },
+            { label: 'else if(val => val)', insert: 'else if(a => b) {\n    \n}', desc: 'Secondary equality condition' },
+            { label: 'else {}', insert: 'else {\n    \n}', desc: 'Fallback branch' },
+            { label: 'eval()', insert: 'eval()', desc: 'Evaluate math expression' },
+            { label: '$button(text, class)', insert: '$button("Click", "btn")', desc: 'HTML Button component' },
+            { label: '$(text, class)', insert: '$("Content", "box")', desc: 'HTML Div component' },
+            { label: '$p(text, class)', insert: '$p("Text", "para")', desc: 'HTML Paragraph component' },
+            { label: '$footer(text, class)', insert: '$footer("Footer", "foot")', desc: 'HTML Footer component' },
+            { label: '$input(ph, var, cls)', insert: '$input("Type...", myVar, "inp")', desc: 'Bound text input' },
+            { label: 'on click("class")', insert: 'on click("btn") {\n    \n}', desc: 'Click event listener' },
+            { label: 'repeat(n)', insert: 'repeat(5) {\n    \n}', desc: 'Repeat block N times' },
+            { label: 'keep(key, val)', insert: 'keep("key", val)', desc: 'Save to local storage' },
+            { label: 'grab(key)', insert: 'grab("key")', desc: 'Read from local storage' },
+            { label: 'addPhrase(p, v)', insert: 'addPhrase("cmd()", "console.log()")', desc: 'Define custom JS phrase' }
+        ];
+
+        const codeInput = document.getElementById('code-input');
+        const codeBackdrop = document.getElementById('code-backdrop');
+        const lineNumbersEl = document.getElementById('line-numbers');
+        const acPopup = document.getElementById('autocomplete-popup');
+        const acList = document.getElementById('autocomplete-list');
+        let acSelectedIndex = 0;
+        let filteredAC = [];
+
+        codeInput.addEventListener('input', () => {
+            // Save content to active file
+            if (activeFileId) {
+                const file = fileSystem.find(f => f.id === activeFileId);
+                if (file) {
+                    file.content = codeInput.value;
+                    saveFileSystem();
+                }
+            }
+            updateEditorView();
+            handleAutocomplete();
+        });
+
+        codeInput.addEventListener('scroll', () => {
+            codeBackdrop.scrollTop = codeInput.scrollTop;
+            codeBackdrop.scrollLeft = codeInput.scrollLeft;
+            lineNumbersEl.scrollTop = codeInput.scrollTop;
+        });
+
+        codeInput.addEventListener('keydown', (e) => {
+            // Run shortcut: Ctrl+Enter or Cmd+Enter
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runNeoteCode();
+                return;
+            }
+
+            // Autocomplete navigation
+            if (!acPopup.classList.contains('hidden')) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    acSelectedIndex = (acSelectedIndex + 1) % filteredAC.length;
+                    renderAutocompleteList();
+                    return;
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    acSelectedIndex = (acSelectedIndex - 1 + filteredAC.length) % filteredAC.length;
+                    renderAutocompleteList();
+                    return;
+                }
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault();
+                    applyAutocomplete(filteredAC[acSelectedIndex]);
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    acPopup.classList.add('hidden');
+                    return;
+                }
+            }
+
+            // Support Tab indentation
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = codeInput.selectionStart;
+                const end = codeInput.selectionEnd;
+                codeInput.value = codeInput.value.substring(0, start) + '    ' + codeInput.value.substring(end);
+                codeInput.selectionStart = codeInput.selectionEnd = start + 4;
+                updateEditorView();
+            }
+        });
+
+        function updateEditorView() {
+            const text = codeInput.value;
+            const { errors } = compileNeote(text);
+            const errorLines = new Set(errors.map(err => err.line));
+
+            // Update Error Badges & Problems Tab
+            updateDiagnosticsUI(errors);
+
+            // Render Line Numbers
+            const lines = text.split('\n');
+            lineNumbersEl.innerHTML = lines.map((_, idx) => {
+                const ln = idx + 1;
+                return errorLines.has(ln)
+                    ? `<div class="line-error-marker" title="Syntax error on line ${ln}">● ${ln}</div>`
+                    : `<div>${ln}</div>`;
+            }).join('');
+
+            // Render Syntax-Highlighted & Error-Underlined Backdrop
+            const highlightedLines = lines.map((line, idx) => {
+                const ln = idx + 1;
+                let htmlLine = highlightNeoteSyntax(line);
+                if (errorLines.has(ln)) {
+                    htmlLine = `<span class="tok-error">${htmlLine || ' '}</span>`;
+                }
+                return htmlLine;
+            });
+
+            codeBackdrop.innerHTML = highlightedLines.join('\n') + '\n';
+        }
+
+        function highlightNeoteSyntax(line) {
+            let escaped = escapeHtml(line);
+
+            // Comments
+            if (escaped.trim().startsWith('//')) {
+                return `<span class="tok-comment">${escaped}</span>`;
+            }
+
+            // Strings
+            escaped = escaped.replace(/(&quot;.*?&quot;|&#039;.*?&#039;)/g, '<span class="tok-string">$1</span>');
+
+            // UI Tags ($button, $p, $footer, $input, $)
+            escaped = escaped.replace(/(\$button|\$footer|\$input|\$p|\$)(?=\()/g, '<span class="tok-ui">$1</span>');
+
+            // Keywords (st, if, else, on, click, repeat)
+            escaped = escaped.replace(/\b(st|if|else|on|click|repeat)\b/g, '<span class="tok-keyword">$1</span>');
+
+            // Built-in Functions
+            escaped = escaped.replace(/\b(cover|qstn|img|vid|aud|eval|keep|grab|addPhrase)\b/g, '<span class="tok-func">$1</span>');
+
+            // Operators (=>)
+            escaped = escaped.replace(/(=&gt;)/g, '<span class="tok-op">$1</span>');
+
+            // Numbers
+            escaped = escaped.replace(/\b(\d+)\b/g, '<span class="tok-number">$1</span>');
+
+            return escaped;
+        }
+
+        function updateDiagnosticsUI(errors) {
+            const badge = document.getElementById('error-badge');
+            const errCount = document.getElementById('error-count');
+            const probPill = document.getElementById('prob-count-pill');
+            const probPanel = document.getElementById('bottom-problems');
+
+            errCount.textContent = errors.length;
+            probPill.textContent = errors.length;
+
+            if (errors.length > 0) {
+                badge.classList.remove('hidden');
+                badge.classList.add('flex');
+                probPanel.innerHTML = errors.map(err => `
+                    <div class="flex items-center gap-2 text-red-400 bg-red-950/30 px-2.5 py-1.5 rounded border border-red-900/50">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span class="font-bold">[Line ${err.line}]</span>
+                        <span>${escapeHtml(err.message)}</span>
+                    </div>
+                `).join('');
+            } else {
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
+                probPanel.innerHTML = `<div class="text-emerald-400 flex items-center gap-1.5"><i class="fa-solid fa-check-circle"></i> No syntax errors detected in current file.</div>`;
+            }
+        }
+
+        function handleAutocomplete() {
+            const pos = codeInput.selectionStart;
+            const textBefore = codeInput.value.substring(0, pos);
+            const match = textBefore.match(/([a-zA-Z0-9_$]+)$/);
+
+            if (!match) {
+                acPopup.classList.add('hidden');
+                return;
+            }
+
+            const token = match[1].toLowerCase();
+            // Combine default autocomplete + custom phrases
+            const allOptions = [
+                ...AUTOCOMPLETE_ITEMS,
+                ...customPhrases.filter(p => !p.builtin).map(p => ({
+                    label: p.phrase,
+                    insert: p.phrase.replace('$1', '""'),
+                    desc: `Custom → ${p.value}`
+                }))
+            ];
+
+            filteredAC = allOptions.filter(item => item.label.toLowerCase().startsWith(token));
+
+            if (filteredAC.length === 0) {
+                acPopup.classList.add('hidden');
+                return;
+            }
+
+            acSelectedIndex = 0;
+            renderAutocompleteList();
+
+            // Position popup near cursor line
+            const linesBefore = textBefore.split('\n');
+            const currentLineIdx = linesBefore.length;
+            const currentCol = linesBefore[linesBefore.length - 1].length;
+            const topOffset = Math.min(currentLineIdx * 22 + 24 - codeInput.scrollTop, codeInput.clientHeight - 160);
+            const leftOffset = Math.min(currentCol * 8 + 64, codeInput.clientWidth - 290);
+
+            acPopup.style.top = `${Math.max(16, topOffset)}px`;
+            acPopup.style.left = `${Math.max(56, leftOffset)}px`;
+            acPopup.classList.remove('hidden');
+        }
+
+        function renderAutocompleteList() {
+            acList.innerHTML = filteredAC.map((item, idx) => `
+                <li onclick="applyAutocomplete(filteredAC[${idx}])" class="px-3 py-1.5 cursor-pointer flex justify-between items-center ${
+                    idx === acSelectedIndex ? 'bg-purple-700/50 text-white' : 'text-zinc-300 hover:bg-zinc-800'
+                }">
+                    <span class="font-mono font-medium text-purple-300">${escapeHtml(item.label)}</span>
+                    <span class="text-[10px] text-neote-muted truncate ml-2">${escapeHtml(item.desc)}</span>
+                </li>
+            `).join('');
+        }
+
+        function applyAutocomplete(item) {
+            if (!item) return;
+            const pos = codeInput.selectionStart;
+            const textBefore = codeInput.value.substring(0, pos);
+            const textAfter = codeInput.value.substring(pos);
+            const replacedBefore = textBefore.replace(/([a-zA-Z0-9_$]+)$/, item.insert);
+
+            codeInput.value = replacedBefore + textAfter;
+            codeInput.selectionStart = codeInput.selectionEnd = replacedBefore.length;
+            acPopup.classList.add('hidden');
+            codeInput.focus();
+            updateEditorView();
+        }
+
+        function insertSnippet(snippet) {
+            const pos = codeInput.selectionStart;
+            const before = codeInput.value.substring(0, pos);
+            const after = codeInput.value.substring(pos);
+            const prefix = before.endsWith('\n') || before === '' ? '' : '\n';
+            codeInput.value = before + prefix + snippet + '\n' + after;
+            codeInput.focus();
+            updateEditorView();
+        }
+
+        /* =========================================================================
+           7. COLLAPSIBLE & RESIZABLE PANELS (SIDEBAR, TERMINAL, OUTPUT)
+           ========================================================================= */
+        function togglePanel(panelName) {
+            if (panelName === 'sidebar') {
+                const el = document.getElementById('sidebar-panel');
+                const resizer = document.getElementById('resizer-sidebar');
+                const topBtn = document.getElementById('toggle-sidebar-btn');
+
+                if (!panelState.sidebar.collapsed) {
+                    panelState.sidebar.lastWidth = el.style.width || '250px';
+                    el.classList.add('hidden');
+                    resizer.classList.add('hidden');
+                    topBtn.classList.remove('text-purple-400', 'bg-purple-900/30');
+                    panelState.sidebar.collapsed = true;
+                } else {
+                    el.classList.remove('hidden');
+                    resizer.classList.remove('hidden');
+                    el.style.width = panelState.sidebar.lastWidth;
+                    topBtn.classList.add('text-purple-400', 'bg-purple-900/30');
+                    panelState.sidebar.collapsed = false;
+                }
+            } else if (panelName === 'terminal') {
+                const el = document.getElementById('terminal-panel');
+                const resizer = document.getElementById('resizer-terminal');
+                const topBtn = document.getElementById('toggle-terminal-btn');
+                const restorePill = document.getElementById('restore-terminal-pill');
+
+                if (!panelState.terminal.collapsed) {
+                    panelState.terminal.lastHeight = el.style.height || '180px';
+                    el.classList.add('hidden');
+                    resizer.classList.add('hidden');
+                    topBtn.classList.remove('text-purple-400', 'bg-purple-900/30');
+                    restorePill.classList.remove('hidden');
+                    panelState.terminal.collapsed = true;
+                } else {
+                    el.classList.remove('hidden');
+                    resizer.classList.remove('hidden');
+                    el.style.height = panelState.terminal.lastHeight;
+                    topBtn.classList.add('text-purple-400', 'bg-purple-900/30');
+                    restorePill.classList.add('hidden');
+                    panelState.terminal.collapsed = false;
+                }
+            } else if (panelName === 'output') {
+                const el = document.getElementById('output-panel');
+                const resizer = document.getElementById('resizer-output');
+                const topBtn = document.getElementById('toggle-output-btn');
+                const restorePill = document.getElementById('restore-output-pill');
+
+                if (!panelState.output.collapsed) {
+                    panelState.output.lastWidth = el.style.width || '38%';
+                    el.classList.add('hidden');
+                    resizer.classList.add('hidden');
+                    topBtn.classList.remove('text-purple-400', 'bg-purple-900/30');
+                    restorePill.classList.remove('hidden');
+                    panelState.output.collapsed = true;
+                } else {
+                    el.classList.remove('hidden');
+                    resizer.classList.remove('hidden');
+                    el.style.width = panelState.output.lastWidth;
+                    topBtn.classList.add('text-purple-400', 'bg-purple-900/30');
+                    restorePill.classList.add('hidden');
+                    panelState.output.collapsed = false;
+                }
+            }
+        }
+
+        function initResizers() {
+            const workspace = document.getElementById('ide-workspace');
+            const sidebar = document.getElementById('sidebar-panel');
+            const resizerSidebar = document.getElementById('resizer-sidebar');
+
+            const terminal = document.getElementById('terminal-panel');
+            const resizerTerminal = document.getElementById('resizer-terminal');
+
+            const output = document.getElementById('output-panel');
+            const resizerOutput = document.getElementById('resizer-output');
+
+            const iframe = document.getElementById('preview-frame');
+            let activeDrag = null;
+
+            const startDrag = (type, resizerEl) => {
+                activeDrag = type;
+                resizerEl.classList.add('dragging');
+                // Prevent iframe from stealing mousemove events while dragging
+                if (iframe) iframe.style.pointerEvents = 'none';
+                document.body.style.cursor = type === 'terminal' ? 'row-resize' : 'col-resize';
+            };
+
+            resizerSidebar.addEventListener('mousedown', (e) => { e.preventDefault(); startDrag('sidebar', resizerSidebar); });
+            resizerTerminal.addEventListener('mousedown', (e) => { e.preventDefault(); startDrag('terminal', resizerTerminal); });
+            resizerOutput.addEventListener('mousedown', (e) => { e.preventDefault(); startDrag('output', resizerOutput); });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!activeDrag) return;
+                const rect = workspace.getBoundingClientRect();
+
+                if (activeDrag === 'sidebar') {
+                    // Offset by 48px activity bar
+                    const newWidth = Math.max(150, Math.min(e.clientX - rect.left - 48, rect.width * 0.45));
+                    sidebar.style.width = `${newWidth}px`;
+                    panelState.sidebar.lastWidth = `${newWidth}px`;
+                } else if (activeDrag === 'terminal') {
+                    const newHeight = Math.max(80, Math.min(rect.bottom - e.clientY, rect.height * 0.7));
+                    terminal.style.height = `${newHeight}px`;
+                    panelState.terminal.lastHeight = `${newHeight}px`;
+                } else if (activeDrag === 'output') {
+                    const newWidth = Math.max(220, Math.min(rect.right - e.clientX, rect.width * 0.65));
+                    output.style.width = `${newWidth}px`;
+                    panelState.output.lastWidth = `${newWidth}px`;
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!activeDrag) return;
+                resizerSidebar.classList.remove('dragging');
+                resizerTerminal.classList.remove('dragging');
+                resizerOutput.classList.remove('dragging');
+                if (iframe) iframe.style.pointerEvents = 'auto';
+                document.body.style.cursor = '';
+                activeDrag = null;
+            });
+        }
+
+        function switchSidebarTab(tab) {
+            // Automatically uncollapse sidebar if user clicks an activity bar icon while collapsed
+            if (panelState.sidebar.collapsed) {
+                togglePanel('sidebar');
+            }
+
+            const expPanel = document.getElementById('sidebar-explorer');
+            const compPanel = document.getElementById('sidebar-components');
+            const btnExp = document.getElementById('tab-btn-explorer');
+            const btnComp = document.getElementById('tab-btn-components');
+
+            if (tab === 'explorer') {
+                expPanel.classList.remove('hidden');
+                compPanel.classList.add('hidden');
+                btnExp.className = 'w-9 h-9 rounded flex items-center justify-center text-purple-400 bg-neote-accentDim border-l-2 border-purple-500 transition';
+                btnComp.className = 'w-9 h-9 rounded flex items-center justify-center text-neote-muted hover:text-zinc-200 transition';
+            } else {
+                expPanel.classList.add('hidden');
+                compPanel.classList.remove('hidden');
+                btnComp.className = 'w-9 h-9 rounded flex items-center justify-center text-purple-400 bg-neote-accentDim border-l-2 border-purple-500 transition';
+                btnExp.className = 'w-9 h-9 rounded flex items-center justify-center text-neote-muted hover:text-zinc-200 transition';
+            }
+        }
+
+        function switchBottomTab(tab) {
+            ['console', 'problems', 'compiled'].forEach(t => {
+                document.getElementById(`bottom-${t}`).classList.add('hidden');
+                document.getElementById(`btab-${t}`).className = 'text-neote-muted hover:text-zinc-200 h-8 flex items-center gap-1.5';
+            });
+            document.getElementById(`bottom-${tab}`).classList.remove('hidden');
+            document.getElementById(`btab-${tab}`).className = 'text-purple-400 font-medium border-b-2 border-purple-500 h-8 flex items-center gap-1.5';
+        }
+
+        function showDialog(title, bodyHtml, onConfirm) {
+            document.getElementById('dialog-title').textContent = title;
+            document.getElementById('dialog-body').innerHTML = bodyHtml;
+            const confirmBtn = document.getElementById('dialog-confirm-btn');
+            confirmBtn.onclick = onConfirm;
+            document.getElementById('dialog-modal').classList.remove('hidden');
+        }
+
+        function closeDialog() {
+            document.getElementById('dialog-modal').classList.add('hidden');
+        }
+
+        function openPhraseModal() {
+            renderPhraseTable();
+            document.getElementById('phrase-modal').classList.remove('hidden');
+        }
+
+        function closePhraseModal() {
+            document.getElementById('phrase-modal').classList.add('hidden');
+        }
+
+        function openDocsModal() {
+            document.getElementById('docs-modal').classList.remove('hidden');
+        }
+
+        function closeDocsModal() {
+            document.getElementById('docs-modal').classList.add('hidden');
+        }
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeAttr(str) {
+            return escapeHtml(str).replace(/\n/g, ' ');
+        }
+
+        // Boot IDE
+        window.onload = initApp;
+    </script>
+</body>
+</html>
