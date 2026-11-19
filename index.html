@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neote IDE — Main Menu & Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        neote: {
+                            bg: '#09090b',
+                            sidebar: '#0e0e12',
+                            editor: '#121217',
+                            panel: '#0c0c10',
+                            border: '#1f1f28',
+                            accent: '#9333ea',
+                            accentHover: '#a855f7',
+                            accentDim: 'rgba(147, 51, 234, 0.15)',
+                            text: '#e4e4e7',
+                            muted: '#71717a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9333ea; }
+        .tip-card-enter {
+            animation: fadeIn 0.6s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-neote-bg text-neote-text h-screen w-screen overflow-hidden flex flex-col font-sans select-none">
+
+    <!-- Top Navigation Bar -->
+    <header class="h-14 bg-neote-sidebar border-b border-neote-border flex items-center justify-between px-6 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold shadow-lg shadow-purple-900/30">
+                <i class="fa-solid fa-code-branch text-base"></i>
+            </div>
+            <div>
+                <h1 class="text-sm font-bold tracking-wider text-white">NEOTE IDE</h1>
+                <p class="text-[10px] text-neote-muted">Professional Language Workspace</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="openLaunchIDE()" class="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-lg shadow-purple-900/40 transition">
+                <i class="fa-solid fa-play text-[10px]"></i> Launch Studio Editor
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Container with Side Nav -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Side Navigation Bar -->
+        <aside class="w-16 bg-neote-sidebar border-r border-neote-border flex flex-col items-center py-4 gap-4 shrink-0">
+            <button onclick="switchView('dashboard')" id="nav-btn-dashboard" class="w-10 h-10 rounded-xl flex items-center justify-center text-purple-400 bg-purple-950/60 border border-purple-700/50 shadow transition" title="Dashboard">
+                <i class="fa-solid fa-folder-tree text-base"></i>
+            </button>
+            <button onclick="switchView('tutorials')" id="nav-btn-tutorials" class="w-10 h-10 rounded-xl flex items-center justify-center text-neote-muted hover:text-purple-400 hover:bg-zinc-800 transition" title="Video Tutorials">
+                <i class="fa-brands fa-youtube text-base"></i>
+            </button>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col overflow-hidden bg-neote-bg">
+            
+            <!-- VIEW 1: DASHBOARD / FILES -->
+            <main id="view-dashboard" class="flex-1 flex flex-col p-6 overflow-y-auto">
+                <div class="max-w-4xl w-full mx-auto space-y-6">
+                    
+                    <!-- Welcome Banner & Quick Actions -->
+                    <div class="bg-gradient-to-r from-purple-950/40 via-neote-sidebar to-neote-sidebar border border-purple-800/40 p-6 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl">
+                        <div>
+                            <h2 class="text-xl font-bold text-white mb-1">Welcome back, Developer</h2>
+                            <p class="text-xs text-neote-muted">Manage your Neote files, folders, and custom language modules stored locally.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="promptNewItem('file')" class="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium px-3 py-2 rounded-lg transition shadow">
+                                <i class="fa-solid fa-file-circle-plus"></i> New File
+                            </button>
+                            <button onclick="promptNewItem('folder')" class="flex items-center gap-1.5 bg-neote-editor hover:bg-zinc-800 text-purple-300 border border-purple-700/50 text-xs font-medium px-3 py-2 rounded-lg transition">
+                                <i class="fa-solid fa-folder-plus"></i> New Folder
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tips Carousel Card (Loads every 7 seconds) -->
+                    <div class="bg-neote-sidebar border border-neote-border rounded-xl p-5 relative overflow-hidden shadow-md">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-600/5 rounded-full blur-2xl pointer-events-none"></div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-lightbulb"></i> Neote Pro Tip <span id="tip-counter" class="text-neote-muted text-[10px]">(1/4)</span>
+                            </span>
+                            <div class="flex items-center gap-1 text-[10px] text-neote-muted">
+                                <span>Auto-rotates every 7s</span>
+                            </div>
+                        </div>
+                        <div id="tip-card-content" class="tip-card-enter space-y-1">
+                            <h3 class="text-sm font-bold text-white" id="tip-title">Use String Interpolation with %%var</h3>
+                            <p class="text-xs text-zinc-300 font-mono" id="tip-desc">st score = 50\n$p("Current Score: %%score", "score-label")</p>
+                        </div>
+                    </div>
+
+                    <!-- Files and Folders Grid -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-neote-muted">Workspace Files & Folders</h3>
+                            <span id="file-count-badge" class="text-[11px] text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/40 font-mono">0 items</span>
+                        </div>
+
+                        <div id="dashboard-file-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <!-- Injected via JavaScript -->
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+
+            <!-- VIEW 2: TUTORIALS PAGE (YouTube Videos) -->
+            <main id="view-tutorials" class="hidden flex-1 flex flex-col p-6 overflow-y-auto">
+                <div class="max-w-5xl w-full mx-auto space-y-6">
+                    
+                    <div class="bg-gradient-to-r from-red-950/40 via-neote-sidebar to-neote-sidebar border border-red-800/30 p-6 rounded-xl flex items-center justify-between shadow-xl">
+                        <div>
+                            <h2 class="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                                <i class="fa-brands fa-youtube text-red-500"></i> Neote Video Tutorials
+                            </h2>
+                            <p class="text-xs text-neote-muted">Learn how to build powerful apps, custom syntax rules, and games in Neote.</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-purple-400 font-mono bg-purple-950/60 px-3 py-1 rounded border border-purple-800/40">Loaded via JS</span>
+                        </div>
+                    </div>
+
+                    <!-- YouTube Tutorials Grid (Loaded from tutorials array in JS) -->
+                    <div id="tutorials-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Injected dynamically via JS -->
+                    </div>
+
+                </div>
+            </main>
+
+        </div>
+    </div>
+
+    <!-- Modal for Creating/Renaming Files and Folders -->
+    <div id="menu-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-neote-sidebar border border-purple-700/60 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="px-5 py-3.5 bg-neote-editor border-b border-neote-border flex justify-between items-center">
+                <h3 id="menu-modal-title" class="text-sm font-semibold text-purple-300">Title</h3>
+                <button onclick="closeMenuModal()" class="text-neote-muted hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="menu-modal-body" class="p-5 space-y-3 text-sm">
+                <!-- Form body -->
+            </div>
+            <div class="px-5 py-3.5 bg-neote-editor border-t border-neote-border flex justify-end gap-2">
+                <button onclick="closeMenuModal()" class="px-3 py-1.5 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Cancel</button>
+                <button id="menu-modal-confirm" class="px-3 py-1.5 rounded-lg text-xs bg-purple-600 hover:bg-purple-500 text-white font-medium shadow">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY_FILES = 'neote_ide_filesystem_v2';
+        
+        const TIPS = [
+            {
+                title: "String Interpolation (%%var)",
+                desc: 'Write `st name = "Warren"` and display live values in strings easily: `showcase("Hello %%name")` or `$p("User: %%name", "label")`.'
+            },
+            {
+                title: "Custom Syntax with addPhrase()",
+                desc: 'Map custom phrases to JavaScript effortlessly: `addPhrase("greet()", "console.log(\'Hello!\')")` or pattern match arguments with `$1`.'
+            },
+            {
+                title: "UI Event Listeners",
+                desc: 'Add interactive behavior instantly using `on click("btn-class") { score = eval(score + 1) }`. All bound UI texts update automatically.'
+            },
+            {
+                title: "CSS Class Styling Blocks",
+                desc: 'Style components cleanly using native Neote syntax: `st btn-style { background: #9333ea; padding: 10px; border-radius: 8px; }`.'
+            }
+        ];
+
+        // YouTube Tutorials loaded dynamically via JavaScript
+        const TUTORIALS = [
+            {
+                title: "Getting Started with Neote Language",
+                duration: "4:15",
+                level: "Beginner",
+                videoId: "dQw4w9WgXcQ", // Replace with your YouTube Video ID when uploaded
+                desc: "Learn how to declare variables, render UI components ($p, $button), and compile your first Neote script."
+            },
+            {
+                title: "Mastering UI Events & Reactive State",
+                duration: "7:30",
+                level: "Intermediate",
+                videoId: "dQw4w9WgXcQ",
+                desc: "Discover how to handle `on click` events, update variables in real-time, and format dynamic counters."
+            },
+            {
+                title: "Creating Custom Rules with addPhrase()",
+                duration: "6:10",
+                level: "Advanced",
+                videoId: "dQw4w9WgXcQ",
+                desc: "Learn how to map custom language phrases and argument patterns (`$1`) directly to underlying JavaScript."
+            },
+            {
+                title: "Building CSS Style Blocks & Layouts",
+                duration: "5:45",
+                level: "Beginner",
+                videoId: "dQw4w9WgXcQ",
+                desc: "Style your Neote apps cleanly using native `st class = { background: val; }` styling syntax."
+            }
+        ];
+
+        let currentTipIdx = 0;
+        let fileSystem = [];
+
+        function initMainMenu() {
+            loadFiles();
+            renderDashboard();
+            renderTutorials();
+            startTipRotation();
+        }
+
+        function switchView(viewName) {
+            const dashView = document.getElementById('view-dashboard');
+            const tutView = document.getElementById('view-tutorials');
+            const btnDash = document.getElementById('nav-btn-dashboard');
+            const btnTut = document.getElementById('nav-btn-tutorials');
+
+            if (viewName === 'dashboard') {
+                dashView.classList.remove('hidden');
+                tutView.classList.add('hidden');
+                btnDash.className = 'w-10 h-10 rounded-xl flex items-center justify-center text-purple-400 bg-purple-950/60 border border-purple-700/50 shadow transition';
+                btnTut.className = 'w-10 h-10 rounded-xl flex items-center justify-center text-neote-muted hover:text-purple-400 hover:bg-zinc-800 transition';
+            } else {
+                dashView.classList.add('hidden');
+                tutView.classList.remove('hidden');
+                btnTut.className = 'w-10 h-10 rounded-xl flex items-center justify-center text-purple-400 bg-purple-950/60 border border-purple-700/50 shadow transition';
+                btnDash.className = 'w-10 h-10 rounded-xl flex items-center justify-center text-neote-muted hover:text-purple-400 hover:bg-zinc-800 transition';
+            }
+        }
+
+        function loadFiles() {
+            const saved = localStorage.getItem(STORAGE_KEY_FILES);
+            if (saved) {
+                try {
+                    fileSystem = JSON.parse(saved);
+                } catch (e) {
+                    seedDefault();
+                }
+            } else {
+                seedDefault();
+            }
+        }
+
+        function seedDefault() {
+            fileSystem = [
+                { id: 'folder-src', name: 'src', type: 'folder', parentId: null, expanded: true },
+                { id: 'file-main', name: 'app.neote', type: 'file', parentId: 'folder-src', content: '// Neote Main Script\nst score = 0\n$button("Click Me", "btn")\n' }
+            ];
+            saveFiles();
+        }
+
+        function saveFiles() {
+            localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(fileSystem));
+        }
+
+        function renderDashboard() {
+            const listEl = document.getElementById('dashboard-file-list');
+            listEl.innerHTML = '';
+            document.getElementById('file-count-badge').textContent = `${fileSystem.length} items`;
+
+            fileSystem.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-neote-sidebar border border-neote-border hover:border-purple-500/60 p-4 rounded-xl flex items-center justify-between transition group shadow-sm';
+                
+                const isFolder = item.type === 'folder';
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 truncate">
+                        <div class="w-9 h-9 rounded-lg ${isFolder ? 'bg-purple-950/50 text-purple-400 border border-purple-800/40' : 'bg-sky-950/50 text-sky-400 border border-sky-800/40'} flex items-center justify-center text-sm shrink-0">
+                            <i class="fa-solid ${isFolder ? 'fa-folder' : 'fa-file-code'}"></i>
+                        </div>
+                        <div class="truncate">
+                            <div class="text-sm font-medium text-white truncate font-mono">${escapeHtml(item.name)}</div>
+                            <div class="text-[10px] text-neote-muted">${isFolder ? 'Folder Group' : 'Neote Script File'}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 opacity-80 group-hover:opacity-100">
+                        ${!isFolder ? `<button onclick="openEditorWithFile('${item.id}')" class="px-2.5 py-1 rounded bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white text-xs font-medium transition" title="Open in IDE">Open</button>` : ''}
+                        <button onclick="promptDeleteItem('${item.id}')" class="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-red-400 transition" title="Delete"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        function renderTutorials() {
+            const gridEl = document.getElementById('tutorials-grid');
+            gridEl.innerHTML = '';
+
+            TUTORIALS.forEach(tut => {
+                const card = document.createElement('div');
+                card.className = 'bg-neote-sidebar border border-neote-border rounded-xl overflow-hidden shadow-lg flex flex-col';
+                card.innerHTML = `
+                    <div class="relative aspect-video bg-zinc-950 border-b border-neote-border flex items-center justify-center group">
+                        <!-- Embedded YouTube Video iframe -->
+                        <iframe class="w-full h-full" src="https://www.youtube-nocookie.com/embed/${tut.videoId}" title="${escapeHtml(tut.title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                    <div class="p-4 flex-1 flex flex-col justify-between space-y-2">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-[10px] font-semibold uppercase tracking-wider text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/40">${tut.level}</span>
+                                <span class="text-[11px] text-neote-muted font-mono"><i class="fa-regular fa-clock mr-1"></i>${tut.duration}</span>
+                            </div>
+                            <h3 class="text-sm font-bold text-white mb-1">${escapeHtml(tut.title)}</h3>
+                            <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(tut.desc)}</p>
+                        </div>
+                    </div>
+                `;
+                gridEl.appendChild(card);
+            });
+        }
+
+        function startTipRotation() {
+            setInterval(() => {
+                currentTipIdx = (currentTipIdx + 1) % TIPS.length;
+                const tip = TIPS[currentTipIdx];
+                const contentEl = document.getElementById('tip-card-content');
+                
+                contentEl.classList.remove('tip-card-enter');
+                void contentEl.offsetWidth;
+                contentEl.classList.add('tip-card-enter');
+
+                document.getElementById('tip-counter').textContent = `(${currentTipIdx + 1}/${TIPS.length})`;
+                document.getElementById('tip-title').textContent = tip.title;
+                document.getElementById('tip-desc').textContent = tip.desc;
+            }, 7000);
+        }
+
+        function promptNewItem(type) {
+            const folders = fileSystem.filter(i => i.type === 'folder');
+            let folderOpts = `<option value="">Root Workspace</option>`;
+            folders.forEach(f => {
+                folderOpts += `<option value="${f.id}">${escapeHtml(f.name)}</option>`;
+            });
+
+            showMenuModal(
+                type === 'file' ? 'Create New Neote File' : 'Create New Folder',
+                `<div>
+                    <label class="block text-xs text-neote-muted mb-1">Name</label>
+                    <input id="modal-name-input" type="text" placeholder="${type === 'file' ? 'script.neote' : 'components'}" class="w-full bg-neote-bg border border-neote-border rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-purple-500 outline-none">
+                </div>
+                ${type === 'file' ? `
+                <div>
+                    <label class="block text-xs text-neote-muted mb-1">Folder Group</label>
+                    <select id="modal-folder-select" class="w-full bg-neote-bg border border-neote-border rounded-lg px-3 py-2 text-white text-xs focus:border-purple-500 outline-none">
+                        ${folderOpts}
+                    </select>
+                </div>` : ''}`,
+                () => {
+                    let name = document.getElementById('modal-name-input').value.trim();
+                    if (!name) return;
+                    if (type === 'file' && !name.endsWith('.neote')) name += '.neote';
+
+                    const parentId = type === 'file' ? (document.getElementById('modal-folder-select').value || null) : null;
+                    fileSystem.push({
+                        id: 'item-' + Date.now(),
+                        name,
+                        type,
+                        parentId,
+                        expanded: true,
+                        content: type === 'file' ? `// ${name}\n$p("Welcome to ${name}", "title")\n` : undefined
+                    });
+                    saveFiles();
+                    renderDashboard();
+                    closeMenuModal();
+                }
+            );
+        }
+
+        function promptDeleteItem(id) {
+            const item = fileSystem.find(i => i.id === id);
+            if (!item) return;
+            showMenuModal(
+                `Delete ${item.name}?`,
+                `<p class="text-xs text-zinc-300">Are you sure you want to delete <span class="text-purple-400 font-mono">${escapeHtml(item.name)}</span>?</p>`,
+                () => {
+                    fileSystem = fileSystem.filter(i => i.id !== id);
+                    saveFiles();
+                    renderDashboard();
+                    closeMenuModal();
+                }
+            );
+        }
+
+        function openEditorWithFile(fileId) {
+            window.location.href = 'neote_ide.html';
+        }
+
+        function openLaunchIDE() {
+            window.location.href = 'neote_ide.html';
+        }
+
+        function showMenuModal(title, bodyHtml, onConfirm) {
+            document.getElementById('menu-modal-title').textContent = title;
+            document.getElementById('menu-modal-body').innerHTML = bodyHtml;
+            document.getElementById('menu-modal-confirm').onclick = onConfirm;
+            document.getElementById('menu-modal').classList.remove('hidden');
+        }
+
+        function closeMenuModal() {
+            document.getElementById('menu-modal').classList.add('hidden');
+        }
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        window.onload = initMainMenu;
+    </script>
+</body>
+</html>
