@@ -757,14 +757,54 @@
 
     // Global, easily extensible keyword translation dictionary
     const guide = {
+      // Console & Output
       "showcase": "console.log",
-      "st": "let",
+      "error": "console.error",
+      "warn": "console.warn",
       "notify": "alert",
-      "qstn": "prompt"
+      "qstn": "prompt",
+
+      // Variables & Declarations
+      "st": "let",
+      "con": "const",
+      "var": "var",
+
+      // Functions & Control Flow
+      "func": "function",
+      "ret": "return",
+      "if": "if",
+      "else": "else",
+      "for": "for",
+      "while": "while",
+
+      // Timing
+      "interval": "setInterval",
+      "timeout": "setTimeout",
+      "clearInt": "clearInterval",
+      "clearTO": "clearTimeout",
+
+      // DOM Selection & Manipulation
+      "doc": "document",
+      "element": "getElementById",
+      "sel": "querySelector",
+      "all": "querySelectorAll",
+      "create": "createElement",
+      "append": "appendChild",
+      "remove": "removeChild",
+      "sense": "addEventListener",
+      "unlisten": "removeEventListener",
+
+      // Async & Networking
+      "async": "async",
+      "wait": "await",
+      "fetch": "fetch",
+      "json": "JSON.parse",
+      "stringify": "JSON.stringify"
     };
 
     // Supported $ DOM content loaders
     const domLoaders = {
+      // Original tags
       "$btn":   { tag: "button",  selfClosing: false, attrMode: "text" },
       "$hd":    { tag: "header",  selfClosing: false, attrMode: "text" },
       "$p":     { tag: "p",       selfClosing: false, attrMode: "text" },
@@ -774,7 +814,46 @@
       "$img":   { tag: "img",     selfClosing: true,  attrMode: "src" },
       "$loader":{ tag: "iframe",  selfClosing: false, attrMode: "src" },
       "$ft":    { tag: "footer",  selfClosing: false, attrMode: "text" },
-      "$href":  { tag: "a",       selfClosing: false, attrMode: "href" }
+      "$href":  { tag: "a",       selfClosing: false, attrMode: "href" },
+
+      // Text & Inline Elements
+      "$span":  { tag: "span",    selfClosing: false, attrMode: "text" },
+      "$strong":{ tag: "strong",  selfClosing: false, attrMode: "text" },
+      "$em":    { tag: "em",      selfClosing: false, attrMode: "text" },
+      "$code":  { tag: "code",    selfClosing: false, attrMode: "text" },
+      "$pre":   { tag: "pre",     selfClosing: false, attrMode: "text" },
+
+      // Lists
+      "$ul":    { tag: "ul",      selfClosing: false, attrMode: "text" },
+      "$ol":    { tag: "ol",      selfClosing: false, attrMode: "text" },
+      "$li":    { tag: "li",      selfClosing: false, attrMode: "text" },
+
+      // Forms & Inputs
+      "$form":    { tag: "form",     selfClosing: false, attrMode: "action" },
+      "$label":   { tag: "label",    selfClosing: false, attrMode: "text" },
+      "$select":  { tag: "select",   selfClosing: false, attrMode: "name" },
+      "$option":  { tag: "option",   selfClosing: false, attrMode: "text" },
+      "$textarea":{ tag: "textarea", selfClosing: false, attrMode: "placeholder" },
+
+      // Tables
+      "$table": { tag: "table",   selfClosing: false, attrMode: "text" },
+      "$tr":    { tag: "tr",      selfClosing: false, attrMode: "text" },
+      "$td":    { tag: "td",      selfClosing: false, attrMode: "text" },
+      "$th":    { tag: "th",      selfClosing: false, attrMode: "text" },
+
+      // Layout & Semantic Sections
+      "$nav":     { tag: "nav",     selfClosing: false, attrMode: "text" },
+      "$article": { tag: "article", selfClosing: false, attrMode: "text" },
+      "$aside":   { tag: "aside",   selfClosing: false, attrMode: "text" },
+
+      // Media & Graphics
+      "$video":   { tag: "video",   selfClosing: false, attrMode: "src" },
+      "$audio":   { tag: "audio",   selfClosing: false, attrMode: "src" },
+      "$canvas":  { tag: "canvas",  selfClosing: false, attrMode: "text" },
+
+      // Self-Closing Structural Breaks
+      "$br":    { tag: "br",      selfClosing: true,  attrMode: "none" },
+      "$hr":    { tag: "hr",      selfClosing: true,  attrMode: "none" }
     };
 
     /**
