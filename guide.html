@@ -1,0 +1,2517 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neote Course — Learn the Neote Language from Zero to Fluent</title>
+  <meta name="description" content="A hands-on course for Neote, the declarative web language that blends $ DOM loaders with clean keyword shortcuts. Run real Neote code in every lesson." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       NEOTE COURSE — self-contained stylesheet
+       Palette lifted from the Neote IDE so the guide feels native.
+       ============================================================ */
+    :root {
+      --bg: #0d0b14;
+      --panel: #151221;
+      --surface: #1c182c;
+      --hover: #241f38;
+      --border: #2a243d;
+      --border-soft: #221d33;
+      --purple: #7c3aed;
+      --violet: #a855f7;
+      --fuchsia: #d946ef;
+      --glow: rgba(124, 58, 237, 0.25);
+      --text: #e2dff0;
+      --muted: #8e86aa;
+      --muted-2: #645c82;
+
+      /* token colors (match the IDE CodeMirror theme) */
+      --tok-keyword: #c084fc;
+      --tok-loader:  #38bdf8;
+      --tok-attr:    #f472b6;
+      --tok-def:     #60a5fa;
+      --tok-string:  #34d399;
+      --tok-number:  #fbbf24;
+      --tok-comment: #645c82;
+      --tok-operator:#94a3b8;
+      --tok-text:    #e2dff0;
+
+      --ok:   #34d399;
+      --warn: #fbbf24;
+      --err:  #ef4444;
+
+      --radius: 14px;
+      --radius-sm: 10px;
+      --maxw: 880px;
+      --sidebar-w: 286px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 600px at 80% -10%, rgba(124,58,237,0.18), transparent 60%),
+                  radial-gradient(900px 500px at -10% 10%, rgba(168,85,247,0.10), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    ::selection { background: rgba(124,58,237,0.40); color: #fff; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #2a243d; border-radius: 9999px; border: 2px solid var(--bg); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--purple); }
+
+    /* ---------- Layout ---------- */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ---------- Sidebar ---------- */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-w);
+      background: linear-gradient(180deg, #120f1d, #0e0c17);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 60;
+      transition: transform .26s cubic-bezier(.4,0,.2,1);
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand .logo {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--purple), #c026d3);
+      display: grid; place-items: center;
+      box-shadow: 0 6px 18px rgba(124,58,237,.45), inset 0 0 0 1px rgba(255,255,255,.08);
+      font-weight: 800; color: #fff; font-size: 16px;
+    }
+    .brand .name { font-weight: 800; letter-spacing: .2px; font-size: 15px; color: #fff; }
+    .brand .ver {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+      color: var(--violet); background: var(--surface); border: 1px solid var(--border);
+      padding: 2px 6px; border-radius: 6px; margin-left: 2px;
+    }
+
+    .nav-scroll { flex: 1; overflow-y: auto; padding: 10px 10px 24px; }
+    .nav-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--muted-2); padding: 14px 10px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 9px;
+      color: var(--muted); text-decoration: none;
+      font-size: 13.5px; font-weight: 500;
+      transition: background .15s, color .15s;
+      border: 1px solid transparent;
+    }
+    .nav-item:hover { background: var(--surface); color: var(--text); }
+    .nav-item.active {
+      background: linear-gradient(90deg, rgba(124,58,237,.22), rgba(124,58,237,.06));
+      color: #fff; border-color: rgba(124,58,237,.35);
+    }
+    .nav-item .num {
+      flex: 0 0 auto; width: 22px; height: 22px; border-radius: 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      display: grid; place-items: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700;
+      color: var(--violet);
+    }
+    .nav-item.active .num { background: var(--purple); color: #fff; border-color: transparent; }
+    .nav-item .ic { width: 14px; text-align: center; opacity: .8; }
+
+    .nav-foot {
+      padding: 12px 16px; border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--muted-2); font-family: 'JetBrains Mono', monospace;
+    }
+    .nav-foot a { color: var(--violet); text-decoration: none; }
+    .nav-foot a:hover { text-decoration: underline; }
+
+    /* ---------- Main ---------- */
+    .main {
+      flex: 1; min-width: 0;
+      margin-left: var(--sidebar-w);
+      display: flex; flex-direction: column;
+    }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 40;
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 22px;
+      background: rgba(13,11,20,.78);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .hamburger {
+      display: none;
+      width: 38px; height: 38px; border-radius: 9px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      cursor: pointer; align-items: center; justify-content: center;
+    }
+    .topbar .crumb {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap;
+    }
+    .topbar .crumb b { color: var(--violet); font-weight: 600; }
+    .topbar .grow { flex: 1; }
+    .pill {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      color: var(--violet); background: rgba(124,58,237,.12);
+      border: 1px solid rgba(124,58,237,.35); padding: 4px 9px; border-radius: 999px;
+    }
+
+    .content {
+      width: 100%; max-width: var(--maxw);
+      margin: 0 auto; padding: 30px 24px 120px;
+    }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      position: relative; overflow: hidden;
+      border: 1px solid var(--border); border-radius: 22px;
+      padding: 40px 32px 36px;
+      background:
+        radial-gradient(600px 240px at 90% -20%, rgba(124,58,237,.30), transparent 70%),
+        radial-gradient(420px 200px at 0% 120%, rgba(217,70,239,.18), transparent 70%),
+        linear-gradient(180deg, #16121f, #100d18);
+      margin-bottom: 36px;
+    }
+    .hero .tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      color: var(--violet); background: rgba(124,58,237,.14);
+      border: 1px solid rgba(124,58,237,.4); padding: 5px 11px; border-radius: 999px;
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      margin: 0 0 12px; font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.1;
+      font-weight: 800; letter-spacing: -.02em;
+      background: linear-gradient(120deg, #fff 10%, #c4b5fd 55%, #a855f7 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p { margin: 0 0 22px; color: #cabfe6; font-size: clamp(1rem, 2.4vw, 1.12rem); max-width: 60ch; }
+    .hero .cta-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 14px;
+      text-decoration: none; cursor: pointer; border: 1px solid transparent;
+      transition: transform .12s, box-shadow .12s, background .15s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple), #9333ea); color: #fff;
+      box-shadow: 0 8px 22px rgba(124,58,237,.45);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(124,58,237,.55); }
+    .btn-ghost { background: var(--surface); color: var(--text); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--hover); }
+
+    .hero .stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border-soft);
+    }
+    .hero .stat .n { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: #fff; }
+    .hero .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+    /* ---------- Sections / Lessons ---------- */
+    section.lesson { padding: 28px 0 8px; border-top: 1px solid var(--border-soft); }
+    section.lesson:first-of-type { border-top: none; }
+
+    .lesson-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .lesson-head .chip {
+      flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      display: grid; place-items: center; font-family: 'JetBrains Mono', monospace;
+      font-weight: 700; font-size: 14px; color: var(--violet);
+    }
+    .lesson-head .kicker {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    }
+    h2 {
+      margin: 4px 0 14px; font-size: clamp(1.5rem, 3.6vw, 1.95rem); line-height: 1.2;
+      font-weight: 800; letter-spacing: -.01em; color: #fff;
+    }
+    h3 { margin: 26px 0 8px; font-size: 1.18rem; font-weight: 700; color: #fff; }
+    h4 { margin: 18px 0 6px; font-size: .98rem; font-weight: 700; color: var(--violet); font-family: 'JetBrains Mono', monospace; }
+
+    p { margin: 0 0 14px; }
+    p.lead { color: #cfc8e6; font-size: 1.05rem; }
+    a { color: var(--violet); }
+    strong { color: #fff; font-weight: 700; }
+    em { color: #d8d2f0; }
+
+    ul, ol { margin: 0 0 16px; padding-left: 22px; }
+    li { margin: 5px 0; }
+    li::marker { color: var(--violet); }
+
+    code.inline {
+      font-family: 'JetBrains Mono', monospace; font-size: .86em;
+      background: var(--surface); color: var(--violet);
+      padding: 2px 6px; border-radius: 5px; border: 1px solid var(--border);
+    }
+
+    .callout {
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 14px 16px 14px 44px; margin: 16px 0; position: relative;
+      background: var(--panel);
+    }
+    .callout::before {
+      content: ""; position: absolute; left: 14px; top: 14px; bottom: 14px; width: 3px; border-radius: 3px;
+    }
+    .callout .ic { position: absolute; left: 14px; top: 13px; width: 20px; height: 20px; }
+    .callout.tip { background: linear-gradient(180deg, rgba(52,211,153,.07), var(--panel)); }
+    .callout.tip::before { background: var(--ok); }
+    .callout.tip .ic { color: var(--ok); }
+    .callout.warn { background: linear-gradient(180deg, rgba(251,191,36,.07), var(--panel)); }
+    .callout.warn::before { background: var(--warn); }
+    .callout.warn .ic { color: var(--warn); }
+    .callout.note { background: linear-gradient(180deg, rgba(56,189,248,.07), var(--panel)); }
+    .callout.note::before { background: var(--tok-loader); }
+    .callout.note .ic { color: var(--tok-loader); }
+    .callout p:last-child { margin-bottom: 0; }
+    .callout .title { font-weight: 700; color: #fff; margin-bottom: 4px; font-size: .92rem; }
+
+    /* ---------- Code blocks ---------- */
+    .codeblock {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: #0a0810; overflow: hidden; margin: 16px 0;
+    }
+    .codeblock .bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
+    }
+    .codeblock .bar .dots { display: flex; gap: 6px; }
+    .codeblock .bar .dots span { width: 10px; height: 10px; border-radius: 50%; }
+    .codeblock .bar .dots span:nth-child(1) { background: #ff5f57; }
+    .codeblock .bar .dots span:nth-child(2) { background: #febc2e; }
+    .codeblock .bar .dots span:nth-child(3) { background: #28c840; }
+    .codeblock .bar .file {
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted);
+      flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    }
+    .codeblock .bar .file .ext { color: var(--violet); }
+    .codeblock .bar .actions { display: flex; gap: 6px; }
+    .cb-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      padding: 5px 9px; border-radius: 7px; cursor: pointer;
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+      transition: background .14s, color .14s;
+    }
+    .cb-btn:hover { background: var(--hover); }
+    .cb-btn.run { color: #fff; background: linear-gradient(135deg, var(--purple), #9333ea); border-color: transparent; }
+    .cb-btn.run:hover { box-shadow: 0 4px 14px rgba(124,58,237,.5); }
+    .cb-btn.copy.done { color: var(--ok); }
+
+    pre.code {
+      margin: 0; padding: 16px 18px; overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 13.2px; line-height: 1.7;
+      color: var(--tok-text); tab-size: 2;
+    }
+    pre.code .ln {
+      display: inline-block; width: 2.2em; padding-right: 12px; text-align: right;
+      color: #564e73; user-select: none; -webkit-user-select: none;
+    }
+    pre.code .row { white-space: pre; }
+
+    /* token colors */
+    .tok-k  { color: var(--tok-keyword); font-weight: 600; }
+    .tok-l  { color: var(--tok-loader);  font-weight: 600; }
+    .tok-a  { color: var(--tok-attr);    font-style: italic; }
+    .tok-d  { color: var(--tok-def); }
+    .tok-s  { color: var(--tok-string); }
+    .tok-n  { color: var(--tok-number); }
+    .tok-c  { color: var(--tok-comment); font-style: italic; }
+    .tok-op { color: var(--tok-operator); }
+
+    /* output iframe */
+    .output-wrap {
+      margin: 12px 0 18px; border: 1px solid var(--border); border-radius: var(--radius);
+      background: #0a0810; overflow: hidden;
+    }
+    .output-wrap .bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+    }
+    .output-wrap .bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); }
+    .output-wrap.live .bar .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .output-wrap .bar .label { color: var(--violet); font-weight: 600; }
+    .output-wrap .bar .grow { flex: 1; }
+    .output-wrap .bar .clear { cursor: pointer; color: var(--muted); }
+    .output-wrap .bar .clear:hover { color: var(--err); }
+    .output-wrap iframe { display: block; width: 100%; height: 240px; border: 0; background: #12101c; }
+    .output-wrap .empty { padding: 28px 18px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* terminal log */
+    .term-log {
+      margin: 10px 0 0; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: #08060e; padding: 10px 12px; max-height: 160px; overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: var(--muted);
+    }
+    .term-log .ln-tag { color: var(--violet); margin-right: 6px; }
+    .term-log .lvl-info { color: var(--tok-string); }
+    .term-log .lvl-warn { color: var(--warn); }
+    .term-log .lvl-error { color: var(--err); }
+    .term-log .lvl-sys { color: var(--muted-2); }
+    .term-log:empty::before { content: "Terminal output will appear here when you run a Neote program."; color: var(--muted-2); }
+
+    /* ---------- Tables ---------- */
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); margin: 16px 0; }
+    table.ref { width: 100%; border-collapse: collapse; min-width: 480px; }
+    table.ref th, table.ref td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13.5px; vertical-align: top; }
+    table.ref thead th {
+      background: var(--panel); color: var(--muted); font-weight: 700; font-size: 11px;
+      text-transform: uppercase; letter-spacing: .08em; position: sticky; top: 0;
+    }
+    table.ref tbody tr:hover { background: rgba(124,58,237,.06); }
+    table.ref td code, table.ref th code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+    table.ref .col-l { color: var(--tok-loader); font-weight: 600; }
+    table.ref .col-k { color: var(--tok-keyword); font-weight: 600; }
+    table.ref .col-html { color: var(--tok-attr); }
+    table.ref .col-js { color: var(--tok-string); }
+    table.ref td.center, table.ref th.center { text-align: center; }
+
+    /* ---------- Lesson footer / next ---------- */
+    .lesson-foot {
+      display: flex; align-items: stretch; justify-content: space-between; gap: 12px;
+      margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border-soft);
+    }
+    .lf-card {
+      flex: 1; min-width: 0; padding: 12px 14px; border-radius: 11px;
+      background: var(--surface); border: 1px solid var(--border); text-decoration: none;
+      transition: border-color .15s, transform .12s;
+    }
+    .lf-card:hover { border-color: var(--purple); transform: translateY(-1px); }
+    .lf-card .dir { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+    .lf-card .ttl { font-weight: 600; color: #fff; font-size: 14px; margin-top: 2px; }
+    .lf-card.next { text-align: right; }
+    .lf-card.empty { visibility: hidden; }
+
+    /* ---------- Mobile sidebar overlay ---------- */
+    .scrim {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(2px);
+      z-index: 55; opacity: 0; pointer-events: none; transition: opacity .25s;
+    }
+    .scrim.show { opacity: 1; pointer-events: auto; }
+
+    /* ---------- Footer ---------- */
+    footer.site {
+      border-top: 1px solid var(--border); padding: 26px 24px; text-align: center;
+      color: var(--muted); font-size: 12.5px;
+    }
+    footer.site .row { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; align-items: center; }
+    footer.site a { color: var(--muted); text-decoration: none; }
+    footer.site a:hover { color: var(--violet); }
+    footer.site .logo-sm {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--purple), #c026d3);
+      display: inline-grid; place-items: center; color: #fff; font-weight: 800; font-size: 11px;
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 980px) {
+      .hero .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 860px) {
+      :root { --sidebar-w: 0px; }
+      .sidebar { width: 286px; transform: translateX(-105%); box-shadow: 0 0 60px rgba(0,0,0,.6); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .hamburger { display: inline-flex; }
+      .content { padding: 22px 16px 100px; }
+      .hero { padding: 28px 20px 24px; }
+      .topbar { padding: 8px 14px; }
+      .crumb .full { display: none; }
+    }
+    @media (max-width: 560px) {
+      .hero .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .hero .stat .n { font-size: 18px; }
+      pre.code { font-size: 12px; }
+      .lesson-foot { flex-direction: column; }
+      .lf-card.next { text-align: left; }
+    }
+    @media (max-width: 400px) {
+      .hero .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="logo">N</div>
+        <div>
+          <div class="name">NEOTE <span class="ver">COURSE</span></div>
+        </div>
+      </div>
+
+      <nav class="nav-scroll" id="navScroll">
+        <div class="nav-label">Start Here</div>
+        <a class="nav-item" href="#intro"><span class="num">01</span><span class="ic">⚡</span> What is Neote?</a>
+        <a class="nav-item" href="#anatomy"><span class="num">02</span><span class="ic">🧬</span> Anatomy of a File</a>
+        <a class="nav-item" href="#dom-loaders"><span class="num">03</span><span class="ic">🧱</span> $ DOM Loaders</a>
+        <a class="nav-item" href="#attributes"><span class="num">04</span><span class="ic">🏷️</span> Inline Attributes</a>
+
+        <div class="nav-label">The Language</div>
+        <a class="nav-item" href="#keywords"><span class="num">05</span><span class="ic">🔑</span> Keyword Shortcuts</a>
+        <a class="nav-item" href="#raw-html"><span class="num">06</span><span class="ic">⬅️</span> Raw HTML & Styles</a>
+        <a class="nav-item" href="#events"><span class="num">07</span><span class="ic">🎛️</span> Events & Interactivity</a>
+
+        <div class="nav-label">Building Blocks</div>
+        <a class="nav-item" href="#forms"><span class="num">08</span><span class="ic">📝</span> Forms & Inputs</a>
+        <a class="nav-item" href="#lists-tables"><span class="num">09</span><span class="ic">📊</span> Lists & Tables</a>
+        <a class="nav-item" href="#media"><span class="num">10</span><span class="ic">🎬</span> Media & Embeds</a>
+        <a class="nav-item" href="#async"><span class="num">11</span><span class="ic">🛰️</span> Async & Fetch</a>
+
+        <div class="nav-label">Mastering the IDE</div>
+        <a class="nav-item" href="#terminal"><span class="num">12</span><span class="ic">🖥️</span> The Terminal CLI</a>
+        <a class="nav-item" href="#workflows"><span class="num">13</span><span class="ic">🧭</span> Workflows & Tips</a>
+        <a class="nav-item" href="#cheat-sheet"><span class="num">14</span><span class="ic">📇</span> Cheat Sheet</a>
+      </nav>
+
+      <div class="nav-foot">
+        neote_tree · v1.0<br/>
+        <a href="#intro">↑ Back to top</a>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+      <div class="topbar">
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation">☰</button>
+        <div class="crumb">
+          <span class="full">neote_tree / </span><b id="crumbCurrent">welcome.neote</b>
+        </div>
+        <div class="grow"></div>
+        <span class="pill" id="progressPill">0 / 14</span>
+      </div>
+
+      <div class="content">
+
+        <!-- HERO -->
+        <header class="hero">
+          <span class="tag">⚡ Neote · a declarative web language</span>
+          <h1>Learn Neote,<br/>from <span style="color:#c084fc">$hd("Hello")</span> to fluent.</h1>
+          <p>Neote is a tiny transpiler that compiles <code class="inline">.neote</code> files into HTML&nbsp;+&nbsp;JavaScript. It blends declarative <code class="inline">$</code> DOM loaders with crisp keyword shortcuts, so you can build real, interactive pages without leaving a single file. Every example on this page is live — edit it, run it, break it.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#intro">Start lesson 1 →</a>
+            <a class="btn btn-ghost" href="#cheat-sheet">Jump to cheat sheet</a>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="n">30+</div><div class="l">$ loaders</div></div>
+            <div class="stat"><div class="n">25</div><div class="l">keywords</div></div>
+            <div class="stat"><div class="n">3</div><div class="l">line types</div></div>
+            <div class="stat"><div class="n">1</div><div class="l">file per app</div></div>
+          </div>
+        </header>
+
+        <!-- LESSONS -->
+
+        <!-- ============ 01 · INTRO ============ -->
+        <section class="lesson" id="intro">
+          <div class="lesson-head">
+            <div class="chip">01</div>
+            <div>
+              <div class="kicker">Start Here · Foundations</div>
+              <h2>What is Neote?</h2>
+            </div>
+          </div>
+
+          <p class="lead">Neote is a small transpiler that turns a single <code class="inline">.neote</code> file into a complete, runnable web page — HTML for structure, JavaScript for behavior, both generated from the same source. You write one file; the IDE compiles it, runs it inside a sandboxed preview, and streams <code class="inline">console</code> output straight back to your terminal.</p>
+
+          <p>The trick is that every line in a Neote file is exactly one of <strong>three kinds</strong>. The transpiler looks at the first character of each line and routes it accordingly:</p>
+
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Starts with</th><th>Kind</th><th>What happens</th></tr></thead>
+              <tbody>
+                <tr><td><code class="col-l">$</code></td><td>DOM loader</td><td>Declaratively emits an HTML element — <code>$hd("Hi")</code> becomes <code class="col-html">&lt;header&gt;Hi&lt;/header&gt;</code>.</td></tr>
+                <tr><td><code class="col-l">&lt;</code></td><td>Raw HTML</td><td>Passed through verbatim — handy for <code>&lt;style&gt;</code> blocks or markup Neote has no loader for.</td></tr>
+                <tr><td>anything else</td><td>JS logic</td><td>Compiled as JavaScript, with Neote keyword shortcuts (<code>st</code>→<code>let</code>, <code>showcase</code>→<code>console.log</code>…) swapped in.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>That's the whole mental model. Mix those three line kinds freely — a header, a button, an event handler, a styled section — and you have a working app in one file. Hit <strong>Run</strong> on the example below to see it compile and execute live:</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">welcome<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">// Welcome to Neote! Press Run.
+$hd("Welcome to Neote IDE ⚡") /id="mainHeader"
+$p("Neote blends declarative $ DOM loaders with clean keyword shortcuts.")
+$div("Try clicking the button below!") /class="intro-box"
+
+$input("Enter your developer alias...") /id="aliasInput"
+$btn("Say Hello") /id="greetBtn" /class="primary-btn"
+$ft("Built with Neote Transpiler • Black &amp; Purple Edition")
+
+st appName = "Neote IDE"
+st version = 1.0
+showcase("Booting " + appName + " v" + version + "...")
+
+st btn = doc.element("greetBtn")
+st input = doc.element("aliasInput")
+
+btn.sense("click", func() {
+  st user = input.value.trim() || "Creator"
+  showcase("Greeting triggered for user: " + user)
+  notify("Welcome aboard, " + user + "!")
+})</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> Three line kinds, three colors</div>
+            <p>In the code above, notice how the editor paints <span class="tok-l">$loaders</span> sky-blue, <span class="tok-k">keywords</span> like <span class="tok-k">st</span> and <span class="tok-k">showcase</span> violet, and <span class="tok-a">/attributes</span> pink. The same colors appear in every example on this course, so you can always read a Neote file at a glance.</p>
+          </div>
+
+          <div class="callout tip">
+            <div class="title"><span class="ic">✓</span> Run, then read the terminal</div>
+            <p>Every runnable example on this course has a <strong>▶ Run</strong> button. Click it and the transpiled page renders in the preview pane below; anything the program logs with <code class="inline">showcase()</code> shows up in the terminal strip under it. Try editing the code and running again — changes apply instantly.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <div class="lf-card empty"></div>
+            <a class="lf-card next" href="#anatomy"><div class="dir">Next lesson →</div><div class="ttl">Anatomy of a File</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 02 · ANATOMY ============ -->
+        <section class="lesson" id="anatomy">
+          <div class="lesson-head">
+            <div class="chip">02</div>
+            <div>
+              <div class="kicker">Start Here · How it compiles</div>
+              <h2>Anatomy of a .neote File</h2>
+            </div>
+          </div>
+
+          <p>A Neote file is plain text — no boilerplate, no <code class="inline">&lt;!DOCTYPE&gt;</code>, no closing tags to balance. The transpiler reads it top to bottom, splits it into lines, and emits two parallel streams: an <strong>HTML body</strong> (everything that came from <code>$</code> and <code>&lt;</code> lines) and a <strong>JavaScript block</strong> (everything from logic lines, with keywords translated). The two are combined into one sandboxed document and executed.</p>
+
+          <h3>The four ingredients</h3>
+          <ul>
+            <li><strong>Comments</strong> — any <code class="inline">//</code> to end of line is ignored, just like JavaScript. Use them to annotate sections.</li>
+            <li><strong>DOM loaders</strong> — <code class="inline">$hd("Title")</code>, <code class="inline">$btn("Go") /id="go"</code>, etc. These build your visible page.</li>
+            <li><strong>Raw HTML</strong> — lines beginning with <code class="inline">&lt;</code> pass straight through. Ideal for <code>&lt;style&gt;</code> blocks.</li>
+            <li><strong>Logic</strong> — everything else is JavaScript, written with Neote's keyword shortcuts (<code>st</code>, <code>func</code>, <code>ret</code>, <code>for</code>…).</li>
+          </ul>
+
+          <p>Here is a tiny but complete file that uses all four. Run it, then click <strong>{ } Transpiled</strong> to see exactly what the compiler produced:</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">anatomy<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">// 1. A comment — ignored by the compiler.
+
+// 2. DOM loaders build the page:
+$hd("Counter Demo")
+$p("Click the button to count up.")
+$btn("Click me") /id="counter"
+$p("0") /id="display"
+
+// 3. Raw HTML for a custom style:
+&lt;style&gt;#display { font-size: 2rem; color: #c084fc; font-weight: 800; }&lt;/style&gt;
+
+// 4. Logic, with keyword shortcuts:
+st count = 0
+st btn = doc.element("counter")
+st display = doc.element("display")
+
+btn.sense("click", func() {
+  count = count + 1
+  display.innerText = count
+  showcase("Count is now " + count)
+})</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> Line numbers stay aligned</div>
+            <p>The transpiler intentionally keeps blank lines and <code>$</code>-loader lines as empty entries in the JavaScript stream. That way, if your logic throws a runtime error on line 12, the line number reported in the terminal matches the line you see in the editor — no mental offset required.</p>
+          </div>
+
+          <h3>Files, folders, and persistence</h3>
+          <p>In the Neote IDE, your files live in a virtual tree called <code class="inline">neote_tree</code>, backed by <code class="inline">localStorage</code>. Create <code class="inline">.neote</code>, <code class="inline">.md</code>, and <code class="inline">.txt</code> files inside nested folders, drag to reorganize, and the whole workspace survives a page refresh. Markdown and plain-text files render in their own viewers; only <code class="inline">.neote</code> files transpile and run.</p>
+
+          <div class="callout tip">
+            <div class="title"><span class="ic">✓</span> Two ways to see the result</div>
+            <p>The toolbar's <strong>Run</strong> button (or <kbd>Ctrl</kbd>+<kbd>Enter</kbd>) renders the compiled app into the preview pane. The <strong>Transpile</strong> button shows the generated HTML/JS instead — perfect when you want to confirm what a loader expanded to, or debug a translation. On this course, the <strong>{ } Transpiled</strong> button does the same thing inline.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#intro"><div class="dir">← Previous</div><div class="ttl">What is Neote?</div></a>
+            <a class="lf-card next" href="#dom-loaders"><div class="dir">Next lesson →</div><div class="ttl">$ DOM Loaders</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 03 · DOM LOADERS ============ -->
+        <section class="lesson" id="dom-loaders">
+          <div class="lesson-head">
+            <div class="chip">03</div>
+            <div>
+              <div class="kicker">The Language · Structure</div>
+              <h2>$ DOM Loaders</h2>
+            </div>
+          </div>
+
+          <p class="lead">A DOM loader is the declarative heart of Neote. Every line that starts with <code class="inline">$</code> calls a named loader, hands it arguments in parentheses, and optionally appends slash-prefixed attributes. The compiler turns that one line into exactly one HTML element.</p>
+
+          <p>The grammar is fixed and tiny:</p>
+
+          <div class="codeblock">
+            <div class="bar">
+              <div class="dots"><span></span><span></span><span></span></div>
+              <div class="file">syntax<span class="ext">.neote</span></div>
+            </div>
+            <pre class="code">$loader("argument", "argument", ...) /attr="value" /attr="value"</pre>
+          </div>
+
+          <p>What the first argument <em>means</em> depends on the loader's <strong>attribute mode</strong>. There are seven modes, and they decide whether the argument becomes inner text, a placeholder, a URL, and so on. Knowing the mode for each loader is the key to using them fluently.</p>
+
+          <h3>The seven attribute modes</h3>
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Mode</th><th>What arg #1 becomes</th><th>Example</th><th>Output</th></tr></thead>
+              <tbody>
+                <tr><td><code>text</code></td><td>Inner text of the element</td><td><code class="col-l">$p("Hi")</code></td><td><code class="col-html">&lt;p&gt;Hi&lt;/p&gt;</code></td></tr>
+                <tr><td><code>placeholder</code></td><td>The <code>placeholder</code> attribute</td><td><code class="col-l">$input("Search...")</code></td><td><code class="col-html">&lt;input placeholder="Search..." /&gt;</code></td></tr>
+                <tr><td><code>src</code></td><td>The <code>src</code> attribute</td><td><code class="col-l">$img("cat.png")</code></td><td><code class="col-html">&lt;img src="cat.png" /&gt;</code></td></tr>
+                <tr><td><code>href</code></td><td>arg #1 = href, arg #2 = link text</td><td><code class="col-l">$href("u","t")</code></td><td><code class="col-html">&lt;a href="u"&gt;t&lt;/a&gt;</code></td></tr>
+                <tr><td><code>action</code></td><td>The <code>action</code> attribute</td><td><code class="col-l">$form("/submit")</code></td><td><code class="col-html">&lt;form action="/submit"&gt;&lt;/form&gt;</code></td></tr>
+                <tr><td><code>name</code></td><td>The <code>name</code> attribute</td><td><code class="col-l">$select("country")</code></td><td><code class="col-html">&lt;select name="country"&gt;&lt;/select&gt;</code></td></tr>
+                <tr><td><code>none</code></td><td>No argument taken</td><td><code class="col-l">$hr()</code></td><td><code class="col-html">&lt;hr /&gt;</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Full loader reference</h3>
+          <p>Neote ships with over thirty loaders, grouped by purpose. Each maps to one HTML tag; the mode column tells you what the first argument does.</p>
+
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Loader</th><th>HTML tag</th><th>Mode</th><th>Loader</th><th>HTML tag</th><th>Mode</th></tr></thead>
+              <tbody>
+                <tr><td><code class="col-l">$hd</code></td><td>header</td><td>text</td><td><code class="col-l">$p</code></td><td>p</td><td>text</td></tr>
+                <tr><td><code class="col-l">$btn</code></td><td>button</td><td>text</td><td><code class="col-l">$div</code></td><td>div</td><td>text</td></tr>
+                <tr><td><code class="col-l">$sctn</code></td><td>section</td><td>text</td><td><code class="col-l">$ft</code></td><td>footer</td><td>text</td></tr>
+                <tr><td><code class="col-l">$span</code></td><td>span</td><td>text</td><td><code class="col-l">$strong</code></td><td>strong</td><td>text</td></tr>
+                <tr><td><code class="col-l">$em</code></td><td>em</td><td>text</td><td><code class="col-l">$code</code></td><td>code</td><td>text</td></tr>
+                <tr><td><code class="col-l">$pre</code></td><td>pre</td><td>text</td><td><code class="col-l">$nav</code></td><td>nav</td><td>text</td></tr>
+                <tr><td><code class="col-l">$article</code></td><td>article</td><td>text</td><td><code class="col-l">$aside</code></td><td>aside</td><td>text</td></tr>
+                <tr><td><code class="col-l">$input</code></td><td>input</td><td>placeholder</td><td><code class="col-l">$textarea</code></td><td>textarea</td><td>placeholder</td></tr>
+                <tr><td><code class="col-l">$img</code></td><td>img</td><td>src</td><td><code class="col-l">$video</code></td><td>video</td><td>src</td></tr>
+                <tr><td><code class="col-l">$audio</code></td><td>audio</td><td>src</td><td><code class="col-l">$loader</code></td><td>iframe</td><td>src</td></tr>
+                <tr><td><code class="col-l">$href</code></td><td>a</td><td>href</td><td><code class="col-l">$form</code></td><td>form</td><td>action</td></tr>
+                <tr><td><code class="col-l">$select</code></td><td>select</td><td>name</td><td><code class="col-l">$label</code></td><td>label</td><td>text</td></tr>
+                <tr><td><code class="col-l">$option</code></td><td>option</td><td>text</td><td><code class="col-l">$ul</code></td><td>ul</td><td>text</td></tr>
+                <tr><td><code class="col-l">$ol</code></td><td>ol</td><td>text</td><td><code class="col-l">$li</code></td><td>li</td><td>text</td></tr>
+                <tr><td><code class="col-l">$table</code></td><td>table</td><td>text</td><td><code class="col-l">$tr</code></td><td>tr</td><td>text</td></tr>
+                <tr><td><code class="col-l">$td</code></td><td>td</td><td>text</td><td><code class="col-l">$th</code></td><td>th</td><td>text</td></tr>
+                <tr><td><code class="col-l">$canvas</code></td><td>canvas</td><td>text</td><td><code class="col-l">$br</code></td><td>br</td><td>none</td></tr>
+                <tr><td><code class="col-l">$hr</code></td><td>hr</td><td>none</td><td><code class="col-l"></code></td><td></td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout warn">
+            <div class="title"><span class="ic">⚠</span> Unknown loaders fail loudly</div>
+            <p>If you mistype a loader — say <code class="inline">$buton("Hi")</code> — the transpiler raises a <code>ReferenceError</code> listing every valid loader. The error appears in the terminal and as a wavy red underline in the editor. There is no silent fallback.</p>
+          </div>
+
+          <p>Run the sampler below to see loaders from every mode render at once:</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">loaders<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">// text mode
+$hd("Loader Sampler")
+$p("One line, one element — every time.")
+$strong("Bold text") $em("and italic") $code("and inline code")
+
+// placeholder mode
+$input("Type a search query...")
+
+// src mode
+$img("https://picsum.photos/seed/neote/320/140")
+
+// href mode (url, text)
+$href("https://developer.mozilla.org", "Read the web docs →") /target="_blank"
+
+// none mode — no args
+$hr()
+$ft("End of sampler • $hr() needs no argument")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#anatomy"><div class="dir">← Previous</div><div class="ttl">Anatomy of a File</div></a>
+            <a class="lf-card next" href="#attributes"><div class="dir">Next lesson →</div><div class="ttl">Inline Attributes</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 04 · ATTRIBUTES ============ -->
+        <section class="lesson" id="attributes">
+          <div class="lesson-head">
+            <div class="chip">04</div>
+            <div>
+              <div class="kicker">The Language · Styling</div>
+              <h2>Inline Attributes with /</h2>
+            </div>
+          </div>
+
+          <p class="lead">Loaders generate the element; slash attributes dress it up. Anything written as <code class="inline">/key="value"</code> after a loader call becomes a literal attribute on the emitted tag. Chain as many as you need — order does not matter.</p>
+
+          <div class="codeblock">
+            <div class="bar">
+              <div class="dots"><span></span><span></span><span></span></div>
+              <div class="file">attributes<span class="ext">.neote</span></div>
+            </div>
+            <pre class="code">$btn("Save") /id="saveBtn" /class="primary" /disabled="true"
+// becomes: &lt;button id="saveBtn" class="primary" disabled="true"&gt;Save&lt;/button&gt;</pre>
+          </div>
+
+          <p>The slash syntax is deliberate: it keeps the loader's parentheses focused on <em>content</em> while stashing metadata out of the way. You read <code class="inline">$btn("Save")</code> first, then glance at the trailing <code>/id</code> and <code>/class</code> if you care about wiring.</p>
+
+          <h3>The attributes you'll reach for most</h3>
+          <ul>
+            <li><code class="inline">/id="…"</code> — give the element an id so logic lines can grab it with <code>doc.element("…")</code>.</li>
+            <li><code class="inline">/class="…"</code> — attach one or more CSS classes (space-separated).</li>
+            <li><code class="inline">/style="…"</code> — inline CSS, useful for quick one-offs.</li>
+            <li><code class="inline">/type="…"</code> — input type: <code>"text"</code>, <code>"email"</code>, <code>"password"</code>, <code>"number"</code>, <code>"checkbox"</code>.</li>
+            <li><code class="inline">/target="_blank"</code> — open <code>$href</code> links in a new tab.</li>
+            <li><code class="inline">/value="…"</code>, <code>/srcset="…"</code>, <code>/controls</code>, <code>/autoplay</code> — any real HTML attribute is valid here.</li>
+          </ul>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> Any HTML attribute works</div>
+            <p>The parser accepts any <code>/name="value"</code> pair where the name starts with a letter, colon, or underscore. You are not limited to a fixed list — if the underlying HTML tag supports it, you can attach it.</p>
+          </div>
+
+          <p>Combine attributes with a <code>&lt;style&gt;</code> block and you have a fully styled component, no external CSS file required:</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">styled-card<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">&lt;style&gt;.card { background: linear-gradient(135deg, #7c3aed, #9333ea); color: #fff; padding: 20px 24px; border-radius: 14px; max-width: 340px; box-shadow: 0 10px 30px rgba(124,58,237,.4); margin: 8px 0; border: 0; } .card-btn { background: #fff; color: #7c3aed; }&lt;/style&gt;
+
+$hd("Neote Card") /class="card"
+$p("Built from $hd and $p with /class, styled by a single-line &lt;style&gt; block.") /class="card"
+$btn("Do something") /id="cardBtn" /class="card-btn"
+$ft("•")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout warn">
+            <div class="title"><span class="ic">⚠</span> Quotes are required</div>
+            <p>Every attribute value must be wrapped in matching double or single quotes: <code>/class="btn"</code> or <code>/class='btn'</code>. A bare <code>/class=btn</code> is rejected with a <em>Malformed inline attribute syntax</em> error. The value may itself contain spaces (for multiple classes) — just keep it inside the quotes.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#dom-loaders"><div class="dir">← Previous</div><div class="ttl">$ DOM Loaders</div></a>
+            <a class="lf-card next" href="#keywords"><div class="dir">Next lesson →</div><div class="ttl">Keyword Shortcuts</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 05 · KEYWORDS ============ -->
+        <section class="lesson" id="keywords">
+          <div class="lesson-head">
+            <div class="chip">05</div>
+            <div>
+              <div class="kicker">The Language · Logic</div>
+              <h2>Keyword Shortcuts (the guide)</h2>
+            </div>
+          </div>
+
+          <p class="lead">On logic lines, Neote swaps short mnemonic tokens for their verbose JavaScript equivalents using a dictionary named <code class="inline">guide</code>. Write <code class="inline">st</code> and the compiler emits <code class="inline">let</code>; write <code class="inline">showcase</code> and it emits <code class="inline">console.log</code>. The shortcuts are optional — plain JavaScript works too — but they make dense logic readable.</p>
+
+          <h3>The full translation table</h3>
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Neote</th><th>JavaScript</th><th>Category</th><th>Neote</th><th>JavaScript</th><th>Category</th></tr></thead>
+              <tbody>
+                <tr><td><code class="col-k">st</code></td><td><code>let</code></td><td>vars</td><td><code class="col-k">con</code></td><td><code>const</code></td><td>vars</td></tr>
+                <tr><td><code class="col-k">showcase</code></td><td><code>console.log</code></td><td>output</td><td><code class="col-k">error</code></td><td><code>console.error</code></td><td>output</td></tr>
+                <tr><td><code class="col-k">warn</code></td><td><code>console.warn</code></td><td>output</td><td><code class="col-k">notify</code></td><td><code>alert</code></td><td>output</td></tr>
+                <tr><td><code class="col-k">qstn</code></td><td><code>prompt</code></td><td>output</td><td><code class="col-k">func</code></td><td><code>function</code></td><td>flow</td></tr>
+                <tr><td><code class="col-k">ret</code></td><td><code>return</code></td><td>flow</td><td><code class="col-k">if</code></td><td><code>if</code></td><td>flow</td></tr>
+                <tr><td><code class="col-k">else</code></td><td><code>else</code></td><td>flow</td><td><code class="col-k">for</code></td><td><code>for</code></td><td>flow</td></tr>
+                <tr><td><code class="col-k">while</code></td><td><code>while</code></td><td>flow</td><td><code class="col-k">interval</code></td><td><code>setInterval</code></td><td>timing</td></tr>
+                <tr><td><code class="col-k">timeout</code></td><td><code>setTimeout</code></td><td>timing</td><td><code class="col-k">clearInt</code></td><td><code>clearInterval</code></td><td>timing</td></tr>
+                <tr><td><code class="col-k">clearTO</code></td><td><code>clearTimeout</code></td><td>timing</td><td><code class="col-k">doc</code></td><td><code>document</code></td><td>DOM</td></tr>
+                <tr><td><code class="col-k">element</code></td><td><code>getElementById</code></td><td>DOM</td><td><code class="col-k">sel</code></td><td><code>querySelector</code></td><td>DOM</td></tr>
+                <tr><td><code class="col-k">all</code></td><td><code>querySelectorAll</code></td><td>DOM</td><td><code class="col-k">create</code></td><td><code>createElement</code></td><td>DOM</td></tr>
+                <tr><td><code class="col-k">append</code></td><td><code>appendChild</code></td><td>DOM</td><td><code class="col-k">remove</code></td><td><code>removeChild</code></td><td>DOM</td></tr>
+                <tr><td><code class="col-k">sense</code></td><td><code>addEventListener</code></td><td>DOM</td><td><code class="col-k">unlisten</code></td><td><code>removeEventListener</code></td><td>DOM</td></tr>
+                <tr><td><code class="col-k">async</code></td><td><code>async</code></td><td>async</td><td><code class="col-k">wait</code></td><td><code>await</code></td><td>async</td></tr>
+                <tr><td><code class="col-k">fetch</code></td><td><code>fetch</code></td><td>async</td><td><code class="col-k">json</code></td><td><code>JSON.parse</code></td><td>async</td></tr>
+                <tr><td><code class="col-k">stringify</code></td><td><code>JSON.stringify</code></td><td>async</td><td><code class="col-k"></code></td><td></td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>The golden rule: where keywords do and don't apply</h3>
+          <p>The translator is line-aware and string-aware. It only touches words on <strong>logic lines</strong> — never inside string literals, never inside comments, and never on lines that start with <code class="inline">$</code> or <code class="inline">&lt;</code>. That means a literal <code>"st"</code> in a message stays <code>"st"</code>, and a <code>$p("st is short for let")</code> keeps its text intact.</p>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> The seven flow keywords are no-ops</div>
+            <p><code>if</code>, <code>else</code>, <code>for</code>, <code>while</code>, <code>async</code>, <code>var</code>, and <code>fetch</code> translate to themselves. They are in <code>guide</code> for completeness and autocomplete, not because they change anything — but having them listed means the editor highlights them as Neote keywords.</p>
+          </div>
+
+          <p>This example exercises every category. Run it and watch the terminal fill with <code>showcase</code> output:</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">keywords<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Keyword Tour")
+$p("Open the terminal below to see each keyword in action.")
+
+// variables
+st name = "Neote"
+con version = 1.0
+showcase("Loaded " + name + " v" + version)
+
+// functions & control flow
+func greet(who) {
+  ret "Hello, " + who + "!"
+}
+showcase(greet("developer"))
+
+for (st i = 1; i &lt;= 3; i = i + 1) {
+  showcase("loop tick " + i)
+}
+
+// timing
+timeout(func() {
+  showcase("...fired after 600ms")
+}, 600)
+
+// DOM helpers read back to us
+$btn("ping") /id="pingBtn"
+st btn = doc.element("pingBtn")
+btn.sense("click", func() {
+  warn("button was clicked")
+})
+
+// string-aware: "st" inside text is NOT translated
+showcase("the token 'st' still appears as text")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <div class="title"><span class="ic">✓</span> Mix freely with plain JavaScript</div>
+            <p>Nothing forces you to use shortcuts. <code>const</code>, <code>document.getElementById</code>, <code>addEventListener</code>, <code>async/await</code> all work untouched. Use the short forms where they help readability and the long forms where clarity matters more than brevity — often in shared or complex logic.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#attributes"><div class="dir">← Previous</div><div class="ttl">Inline Attributes</div></a>
+            <a class="lf-card next" href="#raw-html"><div class="dir">Next lesson →</div><div class="ttl">Raw HTML &amp; Styles</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 06 · RAW HTML ============ -->
+        <section class="lesson" id="raw-html">
+          <div class="lesson-head">
+            <div class="chip">06</div>
+            <div>
+              <div class="kicker">The Language · Escape hatch</div>
+              <h2>Raw HTML &amp; Styles</h2>
+            </div>
+          </div>
+
+          <p class="lead">When a line begins with <code class="inline">&lt;</code>, the transpiler copies it into the HTML body verbatim — no parsing, no keyword substitution, no loader expansion. This is your escape hatch for the things Neote's loaders don't cover: <code>&lt;style&gt;</code> blocks, <code>&lt;script src&gt;</code> includes, complex nested markup, or a snippet you already have.</p>
+
+          <h3>The most common use: styling</h3>
+          <p>Neote has no <code>$style</code> loader, and that's intentional. Instead, drop a <code>&lt;style&gt;</code> block anywhere among your <code>$</code> lines. The browser applies the CSS just as it would in any HTML document, and your loaders' <code>/class</code> attributes hook into it.</p>
+
+          <div class="callout warn">
+            <div class="title"><span class="ic">⚠</span> &lt;style&gt; blocks must be one line</div>
+            <p>The transpiler decides what a line is by looking at its first non-space character. Only lines that begin with <code>&lt;</code> are passed through as raw HTML — every other line is compiled as JavaScript. So a multi-line <code>&lt;style&gt;</code> block breaks: the opening <code>&lt;style&gt;</code> and closing <code>&lt;/style&gt;</code> pass through fine, but the CSS rule lines in between (<code>body { ... }</code>, <code>.tile { ... }</code>) are fed to the JavaScript compiler and throw syntax errors. Keep the entire <code>&lt;style&gt;…&lt;/style&gt;</code> on a single line. Long CSS is fine — just let it wrap visually in the editor.</p>
+          </div>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> Raw HTML lines may be indented</div>
+            <p>The “starts with <code>&lt;</code>” test runs on the <em>trimmed</em> line, so indented raw HTML like <code>&nbsp;&nbsp;&lt;div class="tile"&gt;1&lt;/div&gt;</code> still passes through. That means nested raw markup — a <code>&lt;div class="grid"&gt;</code> wrapping several <code>&lt;div class="tile"&gt;</code> children — works across multiple lines, as the example below shows. Only <code>&lt;style&gt;</code> and <code>&lt;script&gt;</code> content suffers the single-line constraint, because their bodies are not themselves tag lines.</p>
+          </div>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">styles<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">&lt;style&gt;body { font-family: 'JetBrains Mono', monospace; } .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 360px; } .tile { background: #1b172b; border: 1px solid #382f57; border-radius: 10px; padding: 18px; text-align: center; color: #c084fc; font-weight: 700; } .tile.hot { background: linear-gradient(135deg, #7c3aed, #d946ef); color: #fff; border-color: transparent; }&lt;/style&gt;
+
+$hd("CSS Grid via &lt;style&gt;")
+&lt;div class="grid"&gt;
+  &lt;div class="tile"&gt;1&lt;/div&gt;
+  &lt;div class="tile hot"&gt;2&lt;/div&gt;
+  &lt;div class="tile"&gt;3&lt;/div&gt;
+  &lt;div class="tile"&gt;4&lt;/div&gt;
+  &lt;div class="tile hot"&gt;5&lt;/div&gt;
+  &lt;div class="tile"&gt;6&lt;/div&gt;
+&lt;/div&gt;
+$ft("Raw &lt;div&gt; nesting + a single-line &lt;style&gt; block.")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> When to choose raw over a loader</div>
+            <p>Reach for a <code>$</code> loader when an element maps cleanly to one tag and you only need text plus a few attributes. Switch to a raw <code>&lt;</code> line when you need deeply nested children, attributes the slash syntax can't express cleanly, or a non-element tag like <code>&lt;style&gt;</code>, <code>&lt;meta&gt;</code>, or <code>&lt;link&gt;</code>. Both land in the same output document.</p>
+          </div>
+
+          <div class="callout warn">
+            <div class="title"><span class="ic">⚠</span> Raw lines are not translated</div>
+            <p>Because <code>&lt;</code> lines bypass the <code>guide</code> dictionary, writing <code>st</code> inside a raw HTML block leaves it as the literal text <code>st</code>. If you need logic, keep it on its own logic line — never embed JavaScript inside a raw block expecting shortcuts to apply.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#keywords"><div class="dir">← Previous</div><div class="ttl">Keyword Shortcuts</div></a>
+            <a class="lf-card next" href="#events"><div class="dir">Next lesson →</div><div class="ttl">Events &amp; Interactivity</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 07 · EVENTS ============ -->
+        <section class="lesson" id="events">
+          <div class="lesson-head">
+            <div class="chip">07</div>
+            <div>
+              <div class="kicker">Building Blocks · Behavior</div>
+              <h2>Events &amp; Interactivity</h2>
+            </div>
+          </div>
+
+          <p class="lead">A page is only useful when it responds. Neote wires behavior the same way the DOM does — pick the element, call <code class="inline">sense()</code> (which is <code>addEventListener</code>), and hand it an event name plus a function. The pattern is so common that almost every interactive Neote file follows the same three-step shape.</p>
+
+          <h3>The three-step pattern</h3>
+          <ol>
+            <li><strong>Render</strong> the element with a <code>/id</code> so you can find it later: <code>$btn("Go") /id="goBtn"</code>.</li>
+            <li><strong>Grab</strong> it in a logic line: <code>st btn = doc.element("goBtn")</code>.</li>
+            <li><strong>Listen</strong> for the event: <code>btn.sense("click", func() { ... })</code>.</li>
+          </ol>
+
+          <p>Inside the handler, read state from the page (an input's <code>.value</code>, a checkbox's <code>.checked</code>) and write results back (an element's <code>.innerText</code>, <code>.style</code>, or new children via <code>doc.create()</code> and <code>append()</code>).</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">events<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Echo Box")
+$p("Type below, then press Echo.")
+$input("Type something...") /id="echoInput" /type="text"
+$btn("Echo") /id="echoBtn"
+$btn("Clear") /id="clearBtn"
+$p("") /id="echoOut"
+
+st input = doc.element("echoInput")
+st out   = doc.element("echoOut")
+st echoBtn   = doc.element("echoBtn")
+st clearBtn  = doc.element("clearBtn")
+
+echoBtn.sense("click", func() {
+  st msg = input.value.trim()
+  if (msg === "") {
+    warn("nothing to echo")
+    out.innerText = "(empty)"
+  } else {
+    out.innerText = "→ " + msg
+    showcase("echoed: " + msg)
+  }
+})
+
+clearBtn.sense("click", func() {
+  input.value = ""
+  out.innerText = ""
+  showcase("cleared")
+})</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <h3>Keyboard events and <code>notify</code> / <code>qstn</code></h3>
+          <p>The same <code>sense()</code> works for any event — <code>"input"</code>, <code>"change"</code>, <code>"keydown"</code>, <code>"submit"</code>. Combine it with the output keywords <code class="inline">notify</code> (<code>alert</code>) and <code class="inline">qstn</code> (<code>prompt</code>) for quick dialog-driven flows.</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">dialogs<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Ask &amp; Tell")
+$btn("What's your name?") /id="askBtn"
+$p("Live keypress count: 0") /id="countLabel"
+$input("type here...") /id="typeBox"
+
+st askBtn = doc.element("askBtn")
+askBtn.sense("click", func() {
+  st reply = qstn("Enter your name:")
+  if (reply) {
+    notify("Nice to meet you, " + reply + "!")
+    showcase("user answered: " + reply)
+  } else {
+    warn("user cancelled the prompt")
+  }
+})
+
+st box = doc.element("typeBox")
+st label = doc.element("countLabel")
+st n = 0
+box.sense("input", func() {
+  n = n + 1
+  label.innerText = "Live keypress count: " + n
+})</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <div class="title"><span class="ic">✓</span> Prefer <code>/id</code> over traversal</div>
+            <p><code>doc.element("x")</code> (which is <code>document.getElementById</code>) is the fastest, most readable way to reach an element. Use <code>sel(".class")</code> (querySelector) only when you genuinely need a CSS selector. Stable ids also keep your wiring obvious when a file grows past a screenful.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#raw-html"><div class="dir">← Previous</div><div class="ttl">Raw HTML &amp; Styles</div></a>
+            <a class="lf-card next" href="#forms"><div class="dir">Next lesson →</div><div class="ttl">Forms &amp; Inputs</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 08 · FORMS ============ -->
+        <section class="lesson" id="forms">
+          <div class="lesson-head">
+            <div class="chip">08</div>
+            <div>
+              <div class="kicker">Building Blocks · Input</div>
+              <h2>Forms &amp; Inputs</h2>
+            </div>
+          </div>
+
+          <p class="lead">Neote covers the full form vocabulary: <code class="inline">$form</code>, <code class="inline">$input</code>, <code class="inline">$textarea</code>, <code class="inline">$label</code>, <code class="inline">$select</code> + <code class="inline">$option</code>. The <code>/type</code> attribute turns a plain input into a password, email, number, checkbox, or date field, exactly as in HTML.</p>
+
+          <p>Remember the modes: <code>$input</code> and <code>$textarea</code> take a <strong>placeholder</strong>; <code>$select</code> takes a <strong>name</strong>; <code>$form</code> takes an <strong>action</strong>; <code>$label</code> and <code>$option</code> take <strong>text</strong>. Add <code>/id</code>, <code>/value</code>, <code>/name</code>, and <code>/for</code> as needed.</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">signup<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">&lt;style&gt;label { display: block; font-size: .85rem; color: #c084fc; font-weight: 600; margin: 8px 0 2px; }&lt;/style&gt;
+
+$hd("Sign Up")
+$form("#") /id="signupForm"
+$label("Email") /for="emailField"
+$input("you@example.com") /id="emailField" /type="email" /name="email"
+$label("Password") /for="pwField"
+$input("••••••••") /id="pwField" /type="password" /name="pw"
+$label("Plan") /for="planField"
+$select("plan") /id="planField"
+$option("Free")
+$option("Pro")
+$option("Team")
+$label("Bio") /for="bioField"
+$textarea("Tell us about yourself...") /id="bioField"
+$btn("Create account") /id="submitBtn"
+$p("") /id="formStatus"
+
+st email = doc.element("emailField")
+st pw = doc.element("pwField")
+st plan = doc.element("planField")
+st status = doc.element("formStatus")
+st submitBtn = doc.element("submitBtn")
+
+submitBtn.sense("click", func() {
+  if (email.value === "" || pw.value === "") {
+    status.innerText = "✗ email and password are required"
+    error("missing fields")
+  } else {
+    st summary = email.value + " · " + plan.value + " · bio: " + (doc.element("bioField").value || "(none)")
+    status.innerText = "✓ welcome, " + email.value
+    showcase("submitted → " + summary)
+  }
+})</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> Reading a select's value</div>
+            <p>A <code>$select</code> emits a real <code>&lt;select name="…"&gt;</code> tag. Read its current choice with <code>sel.value</code> — the browser returns the text of the selected <code>&lt;option&gt;</code>. Add <code>/value="pro"</code> on an <code>$option</code> if you want a value distinct from its visible text.</p>
+          </div>
+
+          <div class="callout warn">
+            <div class="title"><span class="ic">⚠</span> Wire the button's click, not the form's submit</div>
+            <p>Every <code>$</code> loader emits a top-level element, so the field loaders above produce <strong>siblings</strong>, not children of the <code>$form</code>. That means the submit button is not inside the form, and a <code>form.sense("submit", …)</code> listener will never fire — nothing triggers it. The idiomatic fix is to listen for <code>"click"</code> on the button itself (<code>submitBtn.sense("click", func() { … })</code>) and read each field by its <code>/id</code>, exactly as the example does. If you genuinely need a real nested form, build it with raw <code>&lt;</code> HTML instead.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#events"><div class="dir">← Previous</div><div class="ttl">Events &amp; Interactivity</div></a>
+            <a class="lf-card next" href="#lists-tables"><div class="dir">Next lesson →</div><div class="ttl">Lists &amp; Tables</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 09 · LISTS & TABLES ============ -->
+        <section class="lesson" id="lists-tables">
+          <div class="lesson-head">
+            <div class="chip">09</div>
+            <div>
+              <div class="kicker">Building Blocks · Data display</div>
+              <h2>Lists &amp; Tables</h2>
+            </div>
+          </div>
+
+          <p class="lead">For repeating data, Neote gives you list loaders (<code class="inline">$ul</code>, <code class="inline">$ol</code>, <code class="inline">$li</code>) and table loaders (<code class="inline">$table</code>, <code class="inline">$tr</code>, <code class="inline">$th</code>, <code class="inline">$td</code>). They emit the matching HTML tags, so the browser's default list and table styling applies — and your <code>&lt;style&gt;</code> blocks can refine it.</p>
+
+          <p>The cleanest way to build a list from data is to write the static loaders first, then push extra items from logic using <code>doc.create()</code> and <code>append()</code>. That keeps the declarative shell readable while still letting data drive the result.</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">list-builder<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Task Queue")
+$p("Static head items + items appended from data:")
+$ol("") /id="tasks"
+$btn("Add random task") /id="addBtn"
+
+st list = doc.element("tasks")
+st tasks = ["ship the build", "review the PR", "write docs"]
+
+// render the initial array
+for (st i = 0; i &lt; tasks.length; i = i + 1) {
+  st li = doc.create("li")
+  li.innerText = tasks[i]
+  list.append(li)
+}
+
+st btn = doc.element("addBtn")
+st pool = ["fix lint", "merge main", "deploy staging", "open a ticket", "reply to review"]
+btn.sense("click", func() {
+  st pick = pool[Math.floor(Math.random() * pool.length)]
+  st li = doc.create("li")
+  li.innerText = pick + "  (added)"
+  list.append(li)
+  showcase("added task: " + pick)
+})</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <h3>Tables</h3>
+          <p>Tables use the four-tag family <code>$table</code> → <code>$tr</code> → <code>$th</code>/<code>$td</code>. Each takes <strong>text</strong> mode, so a one-cell row is one line. Stack rows in source order and the browser lays out the grid.</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">pricing-table<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Pricing")
+$table("") /id="priceTable"
+$tr("")
+$th("Plan")
+$th("Price")
+$th("Seats")
+$tr("")
+$td("Free")
+$td("$0")
+$td("1")
+$tr("")
+$td("Pro")
+$td("$12")
+$td("5")
+$tr("")
+$td("Team")
+$td("$49")
+$td("25")
+
+showcase("table has " + doc.all("#priceTable tr").length + " rows")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout tip">
+            <div class="title"><span class="ic">✓</span> Empty-text containers are your hooks</div>
+            <p><code>$ol("") /id="tasks"</code> and <code>$table("") /id="priceTable"</code> deliberately pass an empty string. The loader still emits the tag (so children can be appended or rows stacked), and the <code>/id</code> gives logic a stable handle. Use this idiom whenever a container's job is to hold children rather than display its own text.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#forms"><div class="dir">← Previous</div><div class="ttl">Forms &amp; Inputs</div></a>
+            <a class="lf-card next" href="#media"><div class="dir">Next lesson →</div><div class="ttl">Media &amp; Embeds</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 10 · MEDIA ============ -->
+        <section class="lesson" id="media">
+          <div class="lesson-head">
+            <div class="chip">10</div>
+            <div>
+              <div class="kicker">Building Blocks · Rich content</div>
+              <h2>Media &amp; Embeds</h2>
+            </div>
+          </div>
+
+          <p class="lead">The <code>src</code>-mode loaders — <code class="inline">$img</code>, <code class="inline">$video</code>, <code class="inline">$audio</code>, and <code class="inline">$loader</code> (which emits an <code>&lt;iframe&gt;</code>) — drop rich media onto the page in a single line. The first argument is always the source URL; everything else is a slash attribute.</p>
+
+          <h3>Images and video</h3>
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">media<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Media Sampler")
+
+$p("Image with a class:")
+$img("https://picsum.photos/seed/neote-media/360/160") /class="framed"
+
+$p("Video with controls and autoplay muted:")
+$video("https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4") /controls="true" /autoplay="true" /muted="true" /class="framed"
+
+&lt;style&gt;.framed { border-radius: 12px; border: 1px solid #2e2747; max-width: 100%; }&lt;/style&gt;
+
+$ft("All src-mode loaders take the URL as their first argument.")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout warn">
+            <div class="title"><span class="ic">⚠</span> Boolean attributes take a value</div>
+            <p>The slash-attribute grammar requires <code>/key="value"</code>. For boolean HTML attributes like <code>controls</code>, <code>autoplay</code>, <code>muted</code>, <code>loop</code>, write them as <code>/controls="true"</code> or <code>/muted=""</code> — the parser needs the equals-and-quotes form. A bare <code>/controls</code> is rejected as malformed.</p>
+          </div>
+
+          <h3>Embedding other pages with $loader</h3>
+          <p><code class="inline">$loader("url")</code> emits an <code>&lt;iframe&gt;</code> — handy for embedding a YouTube video, a CodePen, a map, or another Neote file's transpiled output. Note: in the course playground the iframe is itself sandboxed, so some embeds that require <code>allow-same-origin</code> may refuse to render; the IDE's preview pane has broader permissions.</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">embed<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Embedded View")
+$p("$loader emits an &lt;iframe&gt; pointing at any URL.")
+$loader("https://example.com") /class="framed"
+
+&lt;style&gt;iframe.framed { min-height: 200px; border-radius: 12px; border: 1px solid #2e2747; }&lt;/style&gt;
+
+$ft("Use $loader for maps, video players, or composing Neote outputs.")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <h3>Canvas for graphics</h3>
+          <p><code class="inline">$canvas("")</code> emits a <code>&lt;canvas&gt;</code> tag. Add <code>/width</code> and <code>/height</code>, then draw from logic by fetching the 2D context. This is the bridge into imperative drawing while keeping the element itself declarative.</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">canvas<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Canvas Gradient")
+$canvas("") /id="cv" /width="320" /height="180" /style="border-radius:12px"
+
+st cv = doc.element("cv")
+st ctx = cv.getContext("2d")
+st grad = ctx.createLinearGradient(0, 0, 320, 180)
+grad.addColorStop(0, "#7c3aed")
+grad.addColorStop(1, "#d946ef")
+ctx.fillStyle = grad
+ctx.fillRect(0, 0, 320, 180)
+
+for (st i = 0; i &lt; 40; i = i + 1) {
+  ctx.beginPath()
+  ctx.arc(Math.random() * 320, Math.random() * 180, Math.random() * 6 + 1, 0, Math.PI * 2)
+  ctx.fillStyle = "rgba(255,255,255," + (Math.random() * 0.5) + ")"
+  ctx.fill()
+}
+showcase("drew 40 sparkles on the gradient")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#lists-tables"><div class="dir">← Previous</div><div class="ttl">Lists &amp; Tables</div></a>
+            <a class="lf-card next" href="#async"><div class="dir">Next lesson →</div><div class="ttl">Async &amp; Fetch</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 11 · ASYNC ============ -->
+        <section class="lesson" id="async">
+          <div class="lesson-head">
+            <div class="chip">11</div>
+            <div>
+              <div class="kicker">Building Blocks · Networking</div>
+              <h2>Async &amp; Fetch</h2>
+            </div>
+          </div>
+
+          <p class="lead">Logic lines compile to real JavaScript, so the full async toolkit is available: <code class="inline">async</code> functions, <code class="inline">wait</code> (that's <code>await</code>), <code class="inline">fetch</code>, <code class="inline">json</code> (<code>JSON.parse</code>), and <code class="inline">stringify</code> (<code>JSON.stringify</code>). Build a UI shell with loaders, then drive it from a network request.</p>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> The pattern</div>
+            <p>Declare <code>func async load() { ... }</code>, call <code>wait fetch(url)</code>, parse with <code>wait res.text()</code> or <code>json(...)`, and write the result into an element. Wrap the call in a <code>try / catch</code> to handle failures gracefully. The async keywords translate cleanly because they live on logic lines, not inside strings.</p>
+          </div>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">fetcher<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">$hd("Random Joke")
+$p("Click to fetch from a public API:")
+$btn("Get joke") /id="jokeBtn"
+$p("loading...") /id="jokeOut"
+$ft("Powered by jokeapi.jvns.ca")
+
+st btn = doc.element("jokeBtn")
+st out = doc.element("jokeOut")
+
+async func loadJoke() {
+  out.innerText = "fetching..."
+  try {
+    st res = wait fetch("https://v2.jokeapi.dev/joke/Any?type=single")
+    st data = json(wait res.text())
+    if (data.joke) {
+      out.innerText = data.joke
+      showcase("got joke (" + data.joke.length + " chars)")
+    } else {
+      out.innerText = "(no joke field)"
+      warn("unexpected shape: " + stringify(data).slice(0, 80))
+    }
+  } catch (e) {
+    out.innerText = "✗ request failed"
+    error(String(e))
+  }
+}
+
+btn.sense("click", loadJoke)
+loadJoke()</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="callout warn">
+            <div class="ic" style="display:none"></div>
+            <p><strong>Note on the sandbox:</strong> the course playground runs each program in a sandboxed iframe with <code>allow-scripts</code> but without <code>allow-same-origin</code>. Cross-origin <code>fetch</code> calls work (the API responds with CORS headers), but requests that need credentials or cookies will be blocked. The IDE's preview pane is more permissive. If a fetch fails in the playground, it is usually the sandbox, not your code.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#media"><div class="dir">← Previous</div><div class="ttl">Media &amp; Embeds</div></a>
+            <a class="lf-card next" href="#terminal"><div class="dir">Next lesson →</div><div class="ttl">The Terminal CLI</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 12 · TERMINAL ============ -->
+        <section class="lesson" id="terminal">
+          <div class="lesson-head">
+            <div class="chip">12</div>
+            <div>
+              <div class="kicker">Mastering the IDE · Tooling</div>
+              <h2>The Terminal CLI</h2>
+            </div>
+          </div>
+
+          <p class="lead">Below the editor in the Neote IDE sits a terminal with four tabs — <strong>Main</strong> (runtime logs), <strong>Errors</strong>, <strong>Info</strong> (file metadata), and <strong>Help</strong>. It also has a command line. Type a command and press enter; the IDE executes it against your workspace.</p>
+
+          <h3>Command reference</h3>
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+              <tbody>
+                <tr><td><code>code.run()</code></td><td>Execute the active file (same as the Run button or <kbd>Ctrl</kbd>+<kbd>Enter</kbd>).</td></tr>
+                <tr><td><code>code.clear()</code></td><td>Clear the editor's current contents.</td></tr>
+                <tr><td><code>code.refresh()</code></td><td>Reload the preview pane without re-running.</td></tr>
+                <tr><td><code>code.stop()</code></td><td>Halt execution and cancel any active timers (intervals/timeouts) from the last run.</td></tr>
+                <tr><td><code>code.undo()</code> / <code>code.redo()</code></td><td>Step the editor backward or forward through edit history.</td></tr>
+                <tr><td><code>terminal.print("msg")</code></td><td>Print a literal string into the terminal output.</td></tr>
+                <tr><td><code>terminal.clear()</code></td><td>Clear all terminal logs.</td></tr>
+                <tr><td><code>terminal.close()</code></td><td>Hide the terminal panel.</td></tr>
+                <tr><td><code>terminal.error()</code></td><td>Switch the terminal to the Errors tab.</td></tr>
+                <tr><td><code>terminal.help()</code></td><td>Print this command reference inside the terminal.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout tip">
+            <div class="title"><span class="ic">✓</span> Use <code>code.stop()</code> when a timer runs wild</div>
+            <p>If a program starts an <code>interval()</code> (setInterval) that keeps firing, the preview never settles. Run <code>code.stop()</code> to cancel every active timer from the last execution before debugging. It's the Neote equivalent of hitting the brakes.</p>
+          </div>
+
+          <h3>Reading the Main tab</h3>
+          <p>Anything your program sends to <code class="inline">showcase()</code>, <code class="inline">warn()</code>, or <code class="inline">error()</code> appears in the Main tab, color-coded by level. Runtime errors — uncaught exceptions, unhandled promise rejections, <code>window.onerror</code> — show with the line number that matches your source. The bridge that carries these messages is injected automatically by the transpiler, so you never wire it up yourself.</p>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> Try it on this page</div>
+            <p>Each runnable example on this course has its own terminal strip under the preview. Run a program that calls <code class="inline">showcase(...)</code> and the message lands right there — no IDE required. The same bridge powers both.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#async"><div class="dir">← Previous</div><div class="ttl">Async &amp; Fetch</div></a>
+            <a class="lf-card next" href="#workflows"><div class="dir">Next lesson →</div><div class="ttl">Workflows &amp; Tips</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 13 · WORKFLOWS ============ -->
+        <section class="lesson" id="workflows">
+          <div class="lesson-head">
+            <div class="chip">13</div>
+            <div>
+              <div class="kicker">Mastering the IDE · Practice</div>
+              <h2>Workflows &amp; Tips</h2>
+            </div>
+          </div>
+
+          <p class="lead">A few habits make Neote dramatically more pleasant to write and debug. These are the patterns that separate a rough sketch from a file you can come back to next week.</p>
+
+          <h3>1. Lay out the page top-to-bottom, then wire behavior</h3>
+          <p>Write every <code>$</code> loader for the static page first — header, inputs, buttons, footer — giving each interactive element a <code>/id</code>. Only then start the logic section. The result reads like a contract: the declarative part shows the structure, the logic part shows the behavior, and the <code>/id</code>s are the dotted lines between them.</p>
+
+          <h3>2. Keep one concern per file</h3>
+          <p>Neote files are cheap and live in <code class="inline">neote_tree</code>. Rather than cramming a multi-screen app into one file, split it into focused ones — <code>header.neote</code>, <code>pricing.neote</code>, <code>signup.neote</code> — and link between them with <code>$href</code>. The tree persists across sessions in <code>localStorage</code>, so reorganizing is drag-and-drop.</p>
+
+          <h3>3. Run early, run often</h3>
+          <p><kbd>Ctrl</kbd>+<kbd>Enter</kbd> re-runs the active file instantly. Get into the habit of running after every few lines, especially when a loader or keyword is new to you. The transpiler reports errors with line numbers and a wavy red underline, so the gap between mistake and fix stays tiny.</p>
+
+          <h3>4. Use the Transpile view to learn</h3>
+          <p>When a result surprises you, click <strong>Transpile</strong> (or <strong>{ } Transpiled</strong> on this course). Seeing the exact HTML and JavaScript the compiler emitted tells you precisely what a loader expanded to and whether a keyword translation landed where you expected. It's the fastest way to build an accurate mental model.</p>
+
+          <h3>5. Autocomplete is your memory</h3>
+          <p>Press <kbd>Ctrl</kbd>+<kbd>Space</kbd> in the editor. The dropdown lists every <code>guide</code> keyword with its translation, every <code>$</code> loader with its HTML target, and every common slash attribute. You don't have to memorize the tables — just remember <kbd>Ctrl</kbd>+<kbd>Space</kbd>.</p>
+
+          <div class="callout note">
+            <div class="title"><span class="ic">💡</span> Keyboard shortcuts</div>
+            <p><kbd>Ctrl</kbd>+<kbd>Enter</kbd> run · <kbd>Ctrl</kbd>+<kbd>S</kbd> save · <kbd>Ctrl</kbd>+<kbd>B</kbd> toggle explorer · <kbd>Ctrl</kbd>+<kbd>`</kbd> toggle terminal · <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> undo/redo · <kbd>Ctrl</kbd>+<kbd>Space</kbd> autocomplete.</p>
+          </div>
+
+          <h3>6. A complete, idiomatic file</h3>
+          <p>This example ties everything together: a styled shell, a form, dynamic list-building, an event handler, and terminal logging. It's the shape a real Neote app takes.</p>
+
+          <div class="runnable">
+            <div class="codeblock" data-runnable="1">
+              <div class="bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="file">todo-app<span class="ext">.neote</span></div>
+                <div class="actions">
+                  <button class="cb-btn" data-act="copy">Copy</button>
+                  <button class="cb-btn" data-act="transpile">{ } Transpiled</button>
+                  <button class="cb-btn run" data-act="run">▶ Run</button>
+                </div>
+              </div>
+              <pre class="code">// A complete, idiomatic Neote app in one file.
+&lt;style&gt;.done span { text-decoration: line-through; opacity: .5; } li { cursor: pointer; padding: 6px 0; list-style: disc; } #newTask { width: 72%; }&lt;/style&gt;
+
+$hd("Neote Todo")
+$input("Add a task...") /id="newTask" /type="text"
+$btn("+ Add") /id="addBtn"
+$ul("") /id="list"
+$p("0 tasks · 0 done") /id="stats"
+
+st list = doc.element("list")
+st input = doc.element("newTask")
+st addBtn = doc.element("addBtn")
+st stats = doc.element("stats")
+st done = 0
+st total = 0
+
+func updateStats() {
+  stats.innerText = total + " tasks · " + done + " done"
+}
+
+func addTask(text) {
+  total = total + 1
+  st li = doc.create("li")
+  st span = doc.create("span")
+  span.innerText = text
+  li.append(span)
+  li.sense("click", func() {
+    if (li.classList.toggle("done")) {
+      done = done + 1
+      showcase("completed: " + text)
+    } else {
+      done = done - 1
+    }
+    updateStats()
+  })
+  list.append(li)
+  updateStats()
+}
+
+addBtn.sense("click", func() {
+  st v = input.value.trim()
+  if (v) { addTask(v); input.value = ""; showcase("added: " + v) }
+  else { warn("empty task ignored") }
+})
+
+input.sense("keydown", func(ev) {
+  if (ev.key === "Enter") { addBtn.click() }
+})
+
+// seed
+for (st i = 0; i &lt; 2; i = i + 1) {
+  addTask("Sample task " + (i + 1))
+}
+showcase("Todo app ready — " + total + " tasks seeded")</pre>
+            </div>
+            <div class="output-wrap" data-output>
+              <div class="bar">
+                <span class="dot"></span><span class="label">Live Preview</span>
+                <span class="grow"></span><span class="meta">ready</span>
+                <span class="clear" data-act="clear">clear</span>
+              </div>
+              <iframe sandbox="allow-scripts allow-modals"></iframe>
+              <div class="term-log" data-term></div>
+            </div>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#terminal"><div class="dir">← Previous</div><div class="ttl">The Terminal CLI</div></a>
+            <a class="lf-card next" href="#cheat-sheet"><div class="dir">Next lesson →</div><div class="ttl">Cheat Sheet</div></a>
+          </div>
+        </section>
+
+        <!-- ============ 14 · CHEAT SHEET ============ -->
+        <section class="lesson" id="cheat-sheet">
+          <div class="lesson-head">
+            <div class="chip">14</div>
+            <div>
+              <div class="kicker">Reference · One page</div>
+              <h2>Neote Cheat Sheet</h2>
+            </div>
+          </div>
+
+          <p class="lead">Everything on one screen. Pin this section while you work.</p>
+
+          <h3>The three line kinds</h3>
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Line</th><th>Kind</th><th>Example</th></tr></thead>
+              <tbody>
+                <tr><td><code class="col-l">$…</code></td><td>DOM loader</td><td><code>$btn("Save") /id="save"</code></td></tr>
+                <tr><td><code class="col-l">&lt;…</code></td><td>Raw HTML</td><td><code>&lt;style&gt;body{margin:0}&lt;/style&gt;</code></td></tr>
+                <tr><td>else</td><td>JS logic</td><td><code>st x = 10</code></td></tr>
+                <tr><td><code>//…</code></td><td>Comment</td><td><code>// ignored</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Loaders by mode</h3>
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Mode</th><th>Loaders</th></tr></thead>
+              <tbody>
+                <tr><td><code>text</code></td><td><code class="col-l">$hd $p $btn $div $sctn $ft $span $strong $em $code $pre $nav $article $aside $li $label $option $td $th $canvas</code></td></tr>
+                <tr><td><code>placeholder</code></td><td><code class="col-l">$input $textarea</code></td></tr>
+                <tr><td><code>src</code></td><td><code class="col-l">$img $video $audio $loader</code></td></tr>
+                <tr><td><code>href</code></td><td><code class="col-l">$href(url, text)</code></td></tr>
+                <tr><td><code>action</code></td><td><code class="col-l">$form(action)</code></td></tr>
+                <tr><td><code>name</code></td><td><code class="col-l">$select(name)</code></td></tr>
+                <tr><td><code>none</code></td><td><code class="col-l">$br $hr</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Keyword shortcuts</h3>
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Neote</th><th>→</th><th>JavaScript</th><th>Neote</th><th>→</th><th>JavaScript</th></tr></thead>
+              <tbody>
+                <tr><td><code class="col-k">st</code></td><td>→</td><td>let</td><td><code class="col-k">con</code></td><td>→</td><td>const</td></tr>
+                <tr><td><code class="col-k">showcase</code></td><td>→</td><td>console.log</td><td><code class="col-k">notify</code></td><td>→</td><td>alert</td></tr>
+                <tr><td><code class="col-k">qstn</code></td><td>→</td><td>prompt</td><td><code class="col-k">error</code></td><td>→</td><td>console.error</td></tr>
+                <tr><td><code class="col-k">func</code></td><td>→</td><td>function</td><td><code class="col-k">ret</code></td><td>→</td><td>return</td></tr>
+                <tr><td><code class="col-k">interval</code></td><td>→</td><td>setInterval</td><td><code class="col-k">timeout</code></td><td>→</td><td>setTimeout</td></tr>
+                <tr><td><code class="col-k">doc</code></td><td>→</td><td>document</td><td><code class="col-k">element</code></td><td>→</td><td>getElementById</td></tr>
+                <tr><td><code class="col-k">sel</code></td><td>→</td><td>querySelector</td><td><code class="col-k">all</code></td><td>→</td><td>querySelectorAll</td></tr>
+                <tr><td><code class="col-k">sense</code></td><td>→</td><td>addEventListener</td><td><code class="col-k">create</code></td><td>→</td><td>createElement</td></tr>
+                <tr><td><code class="col-k">wait</code></td><td>→</td><td>await</td><td><code class="col-k">fetch</code></td><td>→</td><td>fetch</td></tr>
+                <tr><td><code class="col-k">json</code></td><td>→</td><td>JSON.parse</td><td><code class="col-k">stringify</code></td><td>→</td><td>JSON.stringify</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Common patterns</h3>
+          <div class="codeblock">
+            <div class="bar">
+              <div class="dots"><span></span><span></span><span></span></div>
+              <div class="file">patterns<span class="ext">.neote</span></div>
+            </div>
+            <pre class="code">// render + id
+$btn("Go") /id="goBtn"
+
+// grab + listen
+st btn = doc.element("goBtn")
+btn.sense("click", func() { showcase("clicked") })
+
+// read input value
+st v = doc.element("myInput").value
+
+// build a list item and append
+st li = doc.create("li")
+li.innerText = "new"
+doc.element("list").append(li)
+
+// async fetch
+func async load() {
+  st res = wait fetch("/api")
+  st data = json(wait res.text())
+  showcase(data)
+}
+
+// timer
+st id = interval(func() { showcase("tick") }, 1000)
+clearInt(id)</pre>
+          </div>
+
+          <h3>CLI commands</h3>
+          <div class="table-wrap">
+            <table class="ref">
+              <thead><tr><th>Command</th><th>Use</th></tr></thead>
+              <tbody>
+                <tr><td><code>code.run()</code></td><td>run active file</td></tr>
+                <tr><td><code>code.stop()</code></td><td>cancel timers</td></tr>
+                <tr><td><code>code.clear()</code></td><td>clear editor</td></tr>
+                <tr><td><code>terminal.print("x")</code></td><td>log to terminal</td></tr>
+                <tr><td><code>terminal.clear()</code></td><td>clear logs</td></tr>
+                <tr><td><code>terminal.help()</code></td><td>show reference</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout tip">
+            <div class="title"><span class="ic">✓</span> You're fluent</div>
+            <p>You now know every line kind, every loader mode, every keyword category, the terminal CLI, and the idioms that make Neote pleasant. The best next step is to open the IDE, create a fresh <code>.neote</code> file, and build something — every example on this course is editable and runnable, so you can keep experimenting right here until it clicks.</p>
+          </div>
+
+          <div class="lesson-foot">
+            <a class="lf-card" href="#workflows"><div class="dir">← Previous</div><div class="ttl">Workflows &amp; Tips</div></a>
+            <a class="lf-card next" href="#intro"><div class="dir">↑ Back to start</div><div class="ttl">What is Neote?</div></a>
+          </div>
+        </section>
+
+      </div>
+
+      <footer class="site">
+        <div class="row">
+          <span class="logo-sm">N</span>
+          <span>Neote Course · built to match the Neote IDE</span>
+          <span>·</span>
+          <a href="#intro">Top</a>
+          <span>·</span>
+          <a href="#cheat-sheet">Cheat sheet</a>
+        </div>
+        <div class="row" style="margin-top:8px; color: var(--muted-2);">
+          <span>Every code sample runs in your browser via an embedded Neote transpiler.</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- TRANSPILER + APP JS -->
+  <script>
+/* ============================================================
+   NEOTE TRANSPILER — faithful port of the IDE's compiler core.
+   Compiles .neote source into a sandboxed HTML document.
+   ============================================================ */
+const guide = {
+  // Console & Output
+  "showcase": "console.log",
+  "error": "console.error",
+  "warn": "console.warn",
+  "notify": "alert",
+  "qstn": "prompt",
+  // Variables & Declarations
+  "st": "let",
+  "con": "const",
+  "var": "var",
+  // Functions & Control Flow
+  "func": "function",
+  "ret": "return",
+  "if": "if",
+  "else": "else",
+  "for": "for",
+  "while": "while",
+  // Timing
+  "interval": "setInterval",
+  "timeout": "setTimeout",
+  "clearInt": "clearInterval",
+  "clearTO": "clearTimeout",
+  // DOM Selection & Manipulation
+  "doc": "document",
+  "element": "getElementById",
+  "sel": "querySelector",
+  "all": "querySelectorAll",
+  "create": "createElement",
+  "append": "appendChild",
+  "remove": "removeChild",
+  "sense": "addEventListener",
+  "unlisten": "removeEventListener",
+  // Async & Networking
+  "async": "async",
+  "wait": "await",
+  "fetch": "fetch",
+  "json": "JSON.parse",
+  "stringify": "JSON.stringify"
+};
+
+const domLoaders = {
+  "$btn":   { tag: "button",  selfClosing: false, attrMode: "text" },
+  "$hd":    { tag: "header",  selfClosing: false, attrMode: "text" },
+  "$p":     { tag: "p",       selfClosing: false, attrMode: "text" },
+  "$input": { tag: "input",   selfClosing: true,  attrMode: "placeholder" },
+  "$sctn":  { tag: "section", selfClosing: false, attrMode: "text" },
+  "$div":   { tag: "div",     selfClosing: false, attrMode: "text" },
+  "$img":   { tag: "img",     selfClosing: true,  attrMode: "src" },
+  "$loader":{ tag: "iframe",  selfClosing: false, attrMode: "src" },
+  "$ft":    { tag: "footer",  selfClosing: false, attrMode: "text" },
+  "$href":  { tag: "a",       selfClosing: false, attrMode: "href" },
+  "$span":  { tag: "span",    selfClosing: false, attrMode: "text" },
+  "$strong":{ tag: "strong",  selfClosing: false, attrMode: "text" },
+  "$em":    { tag: "em",      selfClosing: false, attrMode: "text" },
+  "$code":  { tag: "code",    selfClosing: false, attrMode: "text" },
+  "$pre":   { tag: "pre",     selfClosing: false, attrMode: "text" },
+  "$ul":    { tag: "ul",      selfClosing: false, attrMode: "text" },
+  "$ol":    { tag: "ol",      selfClosing: false, attrMode: "text" },
+  "$li":    { tag: "li",      selfClosing: false, attrMode: "text" },
+  "$form":    { tag: "form",     selfClosing: false, attrMode: "action" },
+  "$label":   { tag: "label",    selfClosing: false, attrMode: "text" },
+  "$select":  { tag: "select",   selfClosing: false, attrMode: "name" },
+  "$option":  { tag: "option",   selfClosing: false, attrMode: "text" },
+  "$textarea":{ tag: "textarea", selfClosing: false, attrMode: "placeholder" },
+  "$table": { tag: "table",   selfClosing: false, attrMode: "text" },
+  "$tr":    { tag: "tr",      selfClosing: false, attrMode: "text" },
+  "$td":    { tag: "td",      selfClosing: false, attrMode: "text" },
+  "$th":    { tag: "th",      selfClosing: false, attrMode: "text" },
+  "$nav":     { tag: "nav",     selfClosing: false, attrMode: "text" },
+  "$article": { tag: "article", selfClosing: false, attrMode: "text" },
+  "$aside":   { tag: "aside",   selfClosing: false, attrMode: "text" },
+  "$video":   { tag: "video",   selfClosing: false, attrMode: "src" },
+  "$audio":   { tag: "audio",   selfClosing: false, attrMode: "src" },
+  "$canvas":  { tag: "canvas",  selfClosing: false, attrMode: "text" },
+  "$br":    { tag: "br",      selfClosing: true,  attrMode: "none" },
+  "$hr":    { tag: "hr",      selfClosing: true,  attrMode: "none" }
+};
+
+function parseLoaderArgs(argString) {
+  const args = [];
+  let current = "", inQuote = null, escaped = false;
+  for (let i = 0; i < argString.length; i++) {
+    const ch = argString[i];
+    if (escaped) { current += ch; escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      if (!inQuote) { inQuote = ch; continue; }
+      else if (inQuote === ch) { inQuote = null; continue; }
+    }
+    if (ch === "," && !inQuote) { args.push(current.trim()); current = ""; continue; }
+    current += ch;
+  }
+  if (inQuote) return { error: "Unclosed string literal in DOM loader arguments." };
+  if (current.trim() !== "" || args.length > 0) args.push(current.trim());
+  return { args };
+}
+
+function parseSlashAttributes(tail) {
+  const trimmed = tail.trim();
+  if (!trimmed) return { attrs: "" };
+  const attrRegex = /\/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+  let match; const attrs = []; let consumed = 0;
+  while ((match = attrRegex.exec(trimmed)) !== null) {
+    const key = match[1];
+    const val = match[2] !== undefined ? match[2] : match[3];
+    attrs.push(`${key}="${val.replace(/"/g, '&quot;')}"`);
+    consumed += match[0].length;
+  }
+  const leftover = trimmed.replace(attrRegex, "").trim();
+  if (leftover.length > 0)
+    return { error: `Malformed inline attribute syntax near '${leftover}'. Expected /key="value".` };
+  return { attrs: attrs.length ? " " + attrs.join(" ") : "" };
+}
+
+function parseNeoteDomLine(line, lineNumber) {
+  const trimmed = line.trim();
+  const match = trimmed.match(/^(\$[a-zA-Z0-9_]+)\s*\((.*)\)\s*(.*)$/);
+  if (!match)
+    return { error: { line: lineNumber, type: "SyntaxError", message: `Invalid DOM loader syntax: '${trimmed}'. Expected $tag("content") /attr="val".` } };
+  const loaderName = match[1], rawArgs = match[2], rawAttrs = match[3];
+  const spec = domLoaders[loaderName];
+  if (!spec)
+    return { error: { line: lineNumber, type: "ReferenceError", message: `Unknown Neote DOM loader '${loaderName}'. Valid loaders: ${Object.keys(domLoaders).join(", ")}.` } };
+  const parsedArgs = parseLoaderArgs(rawArgs);
+  if (parsedArgs.error) return { error: { line: lineNumber, type: "SyntaxError", message: parsedArgs.error } };
+  const parsedAttrs = parseSlashAttributes(rawAttrs);
+  if (parsedAttrs.error) return { error: { line: lineNumber, type: "SyntaxError", message: parsedAttrs.error } };
+  const args = parsedArgs.args, attrStr = parsedAttrs.attrs;
+  if (spec.attrMode === "text") {
+    const text = args[0] || "";
+    return { html: `<${spec.tag}${attrStr}>${text}</${spec.tag}>` };
+  }
+  if (spec.attrMode === "placeholder") {
+    const ph = (args[0] || "").replace(/"/g, "&quot;");
+    return { html: `<input placeholder="${ph}"${attrStr} />` };
+  }
+  if (spec.attrMode === "src") {
+    const src = args[0] || "";
+    const inner = spec.selfClosing ? "" : `></${spec.tag}>`;
+    if (spec.selfClosing) return { html: `<${spec.tag} src="${src}"${attrStr} />` };
+    return { html: `<${spec.tag} src="${src}"${attrStr}>` };
+  }
+  if (spec.attrMode === "href") {
+    const href = args[0] || "#";
+    const text = args[1] || href;
+    return { html: `<${spec.tag} href="${href}"${attrStr}>${text}</${spec.tag}>` };
+  }
+  if (spec.attrMode === "action") {
+    const action = args[0] || "#";
+    return { html: `<${spec.tag} action="${action}"${attrStr}></${spec.tag}>` };
+  }
+  if (spec.attrMode === "name") {
+    const name = args[0] || "";
+    return { html: `<${spec.tag} name="${name}"${attrStr}></${spec.tag}>` };
+  }
+  if (spec.attrMode === "none") {
+    return { html: `<${spec.tag}${attrStr} />` };
+  }
+  return { html: `<${spec.tag}${attrStr}></${spec.tag}>` };
+}
+
+function translateNeoteKeywords(jsLine) {
+  const keys = Object.keys(guide);
+  if (!keys.length) return jsLine;
+  const escapedKeys = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const wordRegex = new RegExp(`\\b(${escapedKeys.join("|")})\\b`, "g");
+  let result = "", i = 0; const len = jsLine.length;
+  while (i < len) {
+    const ch = jsLine[i];
+    if (ch === "/" && jsLine[i + 1] === "/") { result += jsLine.slice(i); break; }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      const quote = ch; let strToken = ch; i++;
+      while (i < len) {
+        const c = jsLine[i]; strToken += c;
+        if (c === "\\" && i + 1 < len) { i++; strToken += jsLine[i]; }
+        else if (c === quote) { i++; break; }
+        i++;
+      }
+      result += strToken; continue;
+    }
+    let codeChunk = "";
+    while (i < len) {
+      const c = jsLine[i];
+      if (c === '"' || c === "'" || c === "`" || (c === "/" && jsLine[i + 1] === "/")) break;
+      codeChunk += c; i++;
+    }
+    result += codeChunk.replace(wordRegex, (m) => guide[m] || m);
+  }
+  return result;
+}
+
+function transpile(code) {
+  const lines = (code || "").split(/\r?\n/);
+  const htmlLines = [], jsLines = [], errors = [];
+  lines.forEach((rawLine, idx) => {
+    const lineNum = idx + 1;
+    const trimmed = rawLine.trim();
+    if (!trimmed) { jsLines.push(""); return; }
+    if (trimmed.startsWith("$")) {
+      const domRes = parseNeoteDomLine(trimmed, lineNum);
+      if (domRes.error) errors.push(domRes.error);
+      else if (domRes.html) htmlLines.push(domRes.html);
+      jsLines.push(""); return;
+    }
+    if (trimmed.startsWith("<")) { htmlLines.push(rawLine); jsLines.push(""); return; }
+    jsLines.push(translateNeoteKeywords(rawLine));
+  });
+  const htmlBody = htmlLines.join("\n");
+  const jsCode = jsLines.join("\n");
+  try { new Function(jsCode); }
+  catch (syntaxErr) {
+    errors.push({ line: 1, type: "SyntaxError", message: `Compiled JS Syntax Error: ${syntaxErr.message}` });
+  }
+  const fullDocument = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Neote Live Output</title>
+<style>
+  body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background:#12101c; color:#ede9fe; margin:0; padding:20px; line-height:1.6; }
+  header { font-size:1.5rem; font-weight:700; color:#c084fc; margin-bottom:12px; border-bottom:1px solid #2e2747; padding-bottom:8px; }
+  section, div, article, aside, nav { margin-bottom:12px; }
+  p { color:#d8d2f0; margin:8px 0; }
+  button { background:linear-gradient(135deg,#7c3aed,#9333ea); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:600; cursor:pointer; margin:4px 4px 4px 0; transition:transform .12s,box-shadow .12s; }
+  button:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(124,58,237,.45); }
+  input, select, textarea { background:#1b172b; border:1px solid #382f57; color:#f3f0ff; padding:8px 12px; border-radius:8px; outline:none; margin:4px 4px 4px 0; font-family:inherit; font-size:14px; }
+  input:focus, select:focus, textarea:focus { border-color:#a855f7; }
+  a { color:#38bdf8; text-decoration:none; font-weight:500; }
+  a:hover { text-decoration:underline; }
+  img { max-width:100%; border-radius:10px; margin:8px 0; }
+  iframe { width:100%; min-height:200px; border:1px solid #2e2747; border-radius:10px; margin:8px 0; }
+  footer { margin-top:24px; padding-top:10px; border-top:1px solid #2e2747; font-size:.85rem; color:#9388b8; }
+  table { border-collapse:collapse; width:100%; margin:8px 0; }
+  th, td { border:1px solid #2e2747; padding:8px 10px; text-align:left; }
+  th { background:#1b172b; color:#c084fc; }
+  ul, ol { color:#d8d2f0; }
+  code, pre { font-family:'JetBrains Mono',monospace; }
+  pre { background:#0d0b14; padding:12px; border-radius:8px; overflow:auto; }
+  label { display:inline-block; margin:6px 4px; color:#d8d2f0; }
+  form { padding:12px; border:1px solid #2e2747; border-radius:10px; margin:8px 0; }
+</style></head>
+<body>
+${htmlBody}
+<script>
+  (function(){
+    var send=function(p){try{window.parent.postMessage(Object.assign({source:'neote-course'},p),'*')}catch(e){}};
+    var ol=console.log,ow=console.warn,oe=console.error;
+    console.log=function(){ol.apply(console,arguments);send({type:'log',level:'info',args:[].map.call(arguments,function(a){return typeof a==='object'?JSON.stringify(a):String(a)})})};
+    console.warn=function(){ow.apply(console,arguments);send({type:'log',level:'warn',args:[].map.call(arguments,function(a){return typeof a==='object'?JSON.stringify(a):String(a)})})};
+    console.error=function(){oe.apply(console,arguments);send({type:'log',level:'error',args:[].map.call(arguments,function(a){return typeof a==='object'?JSON.stringify(a):String(a)})})};
+    window.onerror=function(m,s,l,c,e){send({type:'runtime-error',message:String(m),line:l||1});return false};
+    window.addEventListener('unhandledrejection',function(ev){send({type:'runtime-error',message:'Unhandled Promise Rejection: '+(ev.reason?ev.reason.message||ev.reason:'Unknown'),line:1})});
+  })();
+<\/script>
+<script>
+${jsCode}
+<\/script>
+</body></html>`;
+  return { htmlBody, jsCode, fullDocument, errors };
+}
+
+/* ============================================================
+   SYNTAX HIGHLIGHTER — mirrors the IDE's CodeMirror token colors
+   ============================================================ */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function span(cls, text){return '<span class="tok-'+cls+'">'+esc(text)+'</span>';}
+
+const guideKeys = Object.keys(guide);
+function highlightLine(rawLine) {
+  // preserve leading whitespace
+  const t = rawLine.replace(/^\s+/, '');
+  const indent = rawLine.slice(0, rawLine.length - t.length);
+  if (!t) return '';
+  if (t.startsWith('$')) return indent + highlightDom(t);
+  if (t.startsWith('<')) return indent + highlightRaw(t);
+  return indent + highlightJs(t);
+}
+
+function highlightDom(t) {
+  const m = t.match(/^(\$[a-zA-Z]\w*)/);
+  if (!m) return esc(t);
+  let out = span('l', m[0]);
+  let rest = t.slice(m[0].length);
+  out += scanTokens(rest, /*isDom*/true);
+  return out;
+}
+
+function highlightRaw(t) {
+  // light HTML highlighting: strings + tag punctuation
+  return scanTokens(t, /*isDom*/false, /*isHtml*/true);
+}
+
+function highlightJs(t) {
+  return scanTokens(t, /*isDom*/false);
+}
+
+function scanTokens(s, isDom, isHtml) {
+  let out = '', i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    // comment
+    if (c === '/' && s[i+1] === '/') { out += span('c', s.slice(i)); break; }
+    // string
+    if (c === '"' || c === "'" || c === '`') {
+      let j = i + 1;
+      while (j < s.length) {
+        if (s[j] === '\\') { j += 2; continue; }
+        if (s[j] === c) { j++; break; }
+        j++;
+      }
+      out += span('s', s.slice(i, j));
+      i = j; continue;
+    }
+    // slash attribute /key="val"  (only meaningful on DOM lines)
+    if (isDom && c === '/' && /[a-zA-Z_:]/.test(s[i+1] || '')) {
+      const m = s.slice(i).match(/^\/[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*(?:"[^"]*"|'[^']*')/);
+      if (m) { out += span('a', m[0]); i += m[0].length; continue; }
+    }
+    // number
+    if (/[0-9]/.test(c) && (i === 0 || !/[a-zA-Z_$]/.test(s[i-1]))) {
+      const m = s.slice(i).match(/^\d+(?:\.\d+)?/);
+      if (m) { out += span('n', m[0]); i += m[0].length; continue; }
+    }
+    // identifier
+    if (/[a-zA-Z_$]/.test(c)) {
+      const m = s.slice(i).match(/^[a-zA-Z_$][\w$]*/);
+      if (m) {
+        const word = m[0];
+        // look ahead for '(' (skip whitespace)
+        let k = i + word.length;
+        while (k < s.length && /\s/.test(s[k])) k++;
+        const isCall = s[k] === '(';
+        if (isHtml) {
+          out += esc(word);
+        } else if (guideKeys.indexOf(word) !== -1) {
+          out += span('k', word);
+        } else if (isCall) {
+          out += span('d', word);
+        } else {
+          out += esc(word);
+        }
+        i += word.length; continue;
+      }
+    }
+    // operators / punctuation
+    if (/[+\-*/=<>!&|.,;:(){}\[\]?]/.test(c)) {
+      out += span('op', c); i++; continue;
+    }
+    // default char
+    out += esc(c); i++;
+  }
+  return out;
+}
+
+function highlightNeote(code) {
+  const lines = code.split(/\r?\n/);
+  return lines.map((ln, idx) => {
+    const num = String(idx + 1).padStart(2, ' ');
+    return '<span class="row"><span class="ln">' + num + '</span>' + highlightLine(ln) + '</span>';
+  }).join('\n');
+}
+
+/* ============================================================
+   APP — sidebar, nav tracking, code blocks, run/transpile/copy
+   ============================================================ */
+(function(){
+  const sidebar = document.getElementById('sidebar');
+  const scrim = document.getElementById('scrim');
+  const hamburger = document.getElementById('hamburger');
+  const navItems = Array.from(document.querySelectorAll('.nav-item'));
+  const progressPill = document.getElementById('progressPill');
+  const crumbCurrent = document.getElementById('crumbCurrent');
+
+  function closeSidebar(){ sidebar.classList.remove('open'); scrim.classList.remove('show'); }
+  hamburger.addEventListener('click', () => {
+    if (sidebar.classList.contains('open')) closeSidebar();
+    else { sidebar.classList.add('open'); scrim.classList.add('show'); }
+  });
+  scrim.addEventListener('click', closeSidebar);
+  navItems.forEach(a => a.addEventListener('click', () => { if (window.innerWidth <= 860) closeSidebar(); }));
+
+  // Active section tracking + progress
+  const sections = Array.from(document.querySelectorAll('section.lesson'));
+  const sectionMeta = sections.map(s => {
+    const chip = s.querySelector('.lesson-head .chip');
+    const kicker = s.querySelector('.lesson-head .kicker');
+    const h2 = s.querySelector('h2');
+    return {
+      el: s,
+      id: s.id,
+      num: chip ? chip.textContent.trim() : '',
+      title: h2 ? h2.textContent.trim() : (kicker ? kicker.textContent.trim() : s.id)
+    };
+  });
+
+  const seen = new Set();
+  function update() {
+    // The active section is the last one whose top has scrolled past the
+    // sticky topbar (threshold ~130px). This matches the section a reader
+    // is actually looking at, instead of a fragile intersection band.
+    const threshold = 130;
+    let current = sections[0];
+    for (let i = 0; i < sections.length; i++) {
+      const s = sections[i];
+      const top = s.getBoundingClientRect().top;
+      if (top - threshold <= 0) {
+        current = s;
+        if (top < window.innerHeight * 0.6) seen.add(s.id);
+      } else {
+        break;
+      }
+    }
+    const id = current.id;
+    navItems.forEach(n => n.classList.toggle('active', n.getAttribute('href') === '#' + id));
+    const meta = sectionMeta.find(m => m.id === id);
+    if (meta) crumbCurrent.textContent = meta.title.toLowerCase().replace(/\s+/g, '_') + '.neote';
+    progressPill.textContent = seen.size + ' / ' + sections.length;
+  }
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) { window.requestAnimationFrame(() => { update(); ticking = false; }); ticking = true; }
+  }, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+
+  // Wire every code block
+  document.querySelectorAll('pre.code').forEach(pre => {
+    const raw = pre.textContent.replace(/\r\n/g, '\n').replace(/\n$/, '');
+    pre.dataset.src = raw;
+    pre.innerHTML = highlightNeote(raw);
+  });
+
+  // Wire runnable groups
+  document.querySelectorAll('.runnable').forEach(group => {
+    const codeblock = group.querySelector('.codeblock');
+    const pre = codeblock.querySelector('pre.code');
+    const outputWrap = group.querySelector('.output-wrap');
+    const iframe = outputWrap ? outputWrap.querySelector('iframe') : null;
+    const termLog = outputWrap ? outputWrap.querySelector('[data-term]') : null;
+    const meta = outputWrap ? outputWrap.querySelector('.meta') : null;
+
+    const src = () => pre.dataset.src;
+
+    codeblock.querySelector('[data-act="copy"]').addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      navigator.clipboard.writeText(src()).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copied'; btn.classList.add('done');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('done'); }, 1400);
+      });
+    });
+
+    const transpileBtn = codeblock.querySelector('[data-act="transpile"]');
+    let transpileView = null;
+    if (transpileBtn) {
+      transpileBtn.addEventListener('click', () => {
+        const r = transpile(src());
+        if (!transpileView) {
+          transpileView = document.createElement('pre');
+          transpileView.className = 'code transpile-view';
+          transpileView.style.borderTop = '1px solid var(--border)';
+          transpileView.style.borderRadius = '0';
+          transpileView.style.display = 'none';
+          codeblock.appendChild(transpileView);
+        }
+        const visible = transpileView.style.display !== 'none';
+        if (visible) {
+          transpileView.style.display = 'none';
+          transpileBtn.classList.remove('run');
+        } else {
+          const snippet =
+            '<!-- Transpiled Neote HTML -->\n' + (r.htmlBody || '<!-- (No DOM elements) -->') + '\n\n' +
+            '<script>\n' + (r.jsCode.trim() || '// (No JavaScript statements)') + '\n<\/script>';
+          transpileView.innerHTML = highlightNeote(snippet);
+          transpileView.style.display = 'block';
+          transpileBtn.classList.add('run');
+        }
+      });
+    }
+
+    if (outputWrap) {
+      // Clear button
+      const clearBtn = outputWrap.querySelector('[data-act="clear"]');
+      if (clearBtn) clearBtn.addEventListener('click', () => {
+        iframe.srcdoc = '';
+        if (termLog) termLog.innerHTML = '';
+        if (meta) { meta.textContent = 'ready'; outputWrap.classList.remove('live'); }
+      });
+    }
+
+    // Terminal message capture scoped to this block
+    if (termLog) {
+      const blockId = 'bk_' + Math.random().toString(36).slice(2, 9);
+      group.dataset.blockId = blockId;
+      window.addEventListener('message', (ev) => {
+        const data = ev.data;
+        if (!data || data.source !== 'neote-course') return;
+        if (group.dataset.liveBlock !== blockId) return; // only the most-recently-run
+        if (data.type === 'log') {
+          const lvl = data.level || 'info';
+          const line = document.createElement('div');
+          line.className = 'lvl-' + lvl;
+          const tag = document.createElement('span'); tag.className = 'ln-tag'; tag.textContent = lvl + ' ›';
+          line.appendChild(tag);
+          line.appendChild(document.createTextNode((data.args || []).join(' ')));
+          termLog.appendChild(line);
+          termLog.scrollTop = termLog.scrollHeight;
+        } else if (data.type === 'runtime-error') {
+          const line = document.createElement('div');
+          line.className = 'lvl-error';
+          const tag = document.createElement('span'); tag.className = 'ln-tag'; tag.textContent = 'error ›';
+          line.appendChild(tag); line.appendChild(document.createTextNode(data.message + ' (line ' + (data.line || 1) + ')'));
+          termLog.appendChild(line);
+          termLog.scrollTop = termLog.scrollHeight;
+          if (meta) meta.textContent = 'runtime error';
+        }
+      });
+    }
+
+    const runBtn = codeblock.querySelector('[data-act="run"]');
+    if (runBtn && outputWrap) {
+      runBtn.addEventListener('click', () => {
+        const r = transpile(src());
+        // mark this group as the live target for messages
+        group.dataset.liveBlock = group.dataset.blockId;
+        if (termLog) termLog.innerHTML = '';
+        if (r.errors.length) {
+          r.errors.forEach(err => {
+            if (termLog) {
+              const line = document.createElement('div');
+              line.className = 'lvl-error';
+              const tag = document.createElement('span'); tag.className = 'ln-tag'; tag.textContent = err.type + ' ›';
+              line.appendChild(tag); line.appendChild(document.createTextNode((err.line ? 'L' + err.line + ': ' : '') + err.message));
+              termLog.appendChild(line);
+            }
+          });
+          if (termLog) termLog.scrollTop = termLog.scrollHeight;
+          // still render partial output
+        }
+        iframe.srcdoc = r.fullDocument;
+        outputWrap.classList.add('live');
+        if (meta) meta.textContent = 'running';
+      });
+    }
+  });
+
+  // Smooth-scroll fallback for older browsers
+  navItems.forEach(a => {
+    a.addEventListener('click', (e) => {
+      const id = a.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); history.replaceState(null, '', '#' + id); }
+    });
+  });
+
+  updateProgress();
+})();
+</script>
+</body>
+</html>
