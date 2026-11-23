@@ -2980,6 +2980,16 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
         installFromRegistry(name);
         return;
       }
+      // Friendly npm-style alias — matches the text copied from packages.html:
+      //   neote install neote-snippets    (or  neote install "neote-snippets")
+      const neoteInstallMatch = trimmed.match(/^neote\s+install\s+(?:(["'`])([^"'`]+)\1|([^\s]+))\s*$/);
+      if (neoteInstallMatch) {
+        const name = neoteInstallMatch[2] || neoteInstallMatch[3];
+        const entry = registryCache.find(e => (e.name || "unnamed") === name);
+        if (!entry) { logToTerminal("Package '" + name + "' not found in the loaded registry. Open Packages → Registry and load your pkgs.json first.", "error"); return; }
+        installFromRegistry(name);
+        return;
+      }
 
       switch (trimmed) {
         case "code.clear()":
@@ -3047,6 +3057,7 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
               '  • packages.enable("name") - Enables an installed package',
               '  • packages.disable("name")- Disables an installed package',
               '  • packages.install("name")- Installs a package from the loaded registry',
+              "  • neote install <name>    - Friendly alias for packages.install()",
               "  • terminal.help()         - Displays this command reference",
               "",
               "Package-registered commands (only available when their package is enabled):"
