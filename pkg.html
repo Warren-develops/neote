@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neote Packages — Browse & download .nep packages</title>
+  <meta name="description" content="Browse, search and download .nep packages for the Neote IDE. Packages are served from a pkgs.json registry hosted in your GitHub repo." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+          },
+          colors: {
+            neote: {
+              bg: '#0d0b14',
+              panel: '#151221',
+              surface: '#1c182c',
+              hover: '#241f38',
+              border: '#2a243d',
+              purple: '#7c3aed',
+              violet: '#a855f7',
+              glow: 'rgba(124, 58, 237, 0.25)',
+              text: '#e2dff0',
+              muted: '#8e86aa',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Marked.js for rendering package markdown readmes -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { background-color: #0d0b14; color: #e2dff0; font-family: 'Inter', sans-serif; }
+    body { min-height: 100vh; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0d0b14; }
+    ::-webkit-scrollbar-thumb { background: #2a243d; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
+
+    /* Subtle animated aurora glow behind the hero */
+    .aurora {
+      background:
+        radial-gradient(60% 60% at 15% 0%, rgba(124,58,237,0.25), transparent 70%),
+        radial-gradient(50% 50% at 90% 10%, rgba(236,72,153,0.18), transparent 70%);
+    }
+
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .line-clamp-3 {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Card hover lift */
+    .pkg-card { transition: transform .15s ease, border-color .15s ease, background-color .15s ease, box-shadow .15s ease; }
+    .pkg-card:hover { transform: translateY(-2px); border-color: #7c3aed; box-shadow: 0 8px 30px -10px rgba(124,58,237,0.45); }
+
+    .chip { transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+
+    /* Markdown readme styling (mirrors the Neote IDE) */
+    .markdown-body { color: #e2dff0; font-family: 'Inter', sans-serif; line-height: 1.7; }
+    .markdown-body h1 { font-size: 1.6rem; font-weight: 700; color: #c084fc; border-bottom: 1px solid #2a243d; padding-bottom: .4rem; margin: 0 0 1rem; }
+    .markdown-body h2 { font-size: 1.25rem; font-weight: 600; color: #a855f7; margin: 1.4rem 0 .6rem; }
+    .markdown-body h3 { font-size: 1.05rem; font-weight: 600; color: #e2dff0; margin: 1.1rem 0 .5rem; }
+    .markdown-body p { margin: 0 0 .9rem; color: #cfc9e6; }
+    .markdown-body code { background: #1c182c; color: #f472b6; padding: .15rem .4rem; border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: .85em; border: 1px solid #2a243d; }
+    .markdown-body pre { background: #151221; border: 1px solid #2a243d; border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 0 0 1rem; }
+    .markdown-body pre code { background: transparent; border: none; padding: 0; color: #e2dff0; }
+    .markdown-body ul, .markdown-body ol { margin: 0 0 1rem 1.4rem; }
+    .markdown-body ul { list-style: disc; }
+    .markdown-body ol { list-style: decimal; }
+    .markdown-body li { margin: .25rem 0; color: #cfc9e6; }
+    .markdown-body blockquote { border-left: 3px solid #7c3aed; padding-left: 1rem; color: #9e95bd; font-style: italic; margin: 0 0 1rem; }
+    .markdown-body a { color: #38bdf8; text-decoration: underline; }
+    .markdown-body table { width: 100%; border-collapse: collapse; margin: 0 0 1rem; font-size: .9rem; }
+    .markdown-body th, .markdown-body td { border: 1px solid #2a243d; padding: .5rem .7rem; text-align: left; }
+    .markdown-body th { background: #1c182c; color: #c084fc; }
+    .markdown-body hr { border: none; border-top: 1px solid #2a243d; margin: 1.5rem 0; }
+
+    /* Fade-in for cards */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .fade-up { animation: fadeUp .25s ease both; }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- ============ HEADER ============ -->
+  <header class="sticky top-0 z-40 border-b border-neote-border bg-neote-bg/90 backdrop-blur-md">
+    <div class="aurora">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+        <!-- Brand -->
+        <a href="#" onclick="closeDetail();return false;" class="flex items-center gap-2 shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-neote-purple to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
+            <i class="fa-solid fa-bolt text-white text-sm"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-bold tracking-tight text-white text-sm sm:text-base">Neote <span class="text-neote-violet">Packages</span></div>
+            <div class="text-[10px] text-neote-muted font-mono hidden sm:block">browse &amp; download <code class="text-neote-violet">.nep</code> files</div>
+          </div>
+        </a>
+
+        <!-- Search (desktop inline, mobile below) -->
+        <div class="hidden md:flex flex-1 max-w-xl mx-auto relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-neote-muted text-xs"></i>
+          <input id="searchInput" type="text" autocomplete="off" spellcheck="false"
+            placeholder="Search packages — name, tag, description…"
+            class="w-full bg-neote-panel border border-neote-border focus:border-neote-violet rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-neote-muted/70 focus:outline-none transition" />
+          <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-neote-muted hover:text-white text-xs px-1.5">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Right controls -->
+        <div class="flex items-center gap-2 ml-auto md:ml-0 shrink-0">
+          <span id="pkgCountBadge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neote-surface border border-neote-border text-[11px] font-mono text-neote-muted">
+            <i class="fa-solid fa-box-open text-neote-violet"></i>
+            <span id="pkgCountText">—</span> packages
+          </span>
+          <button onclick="openRegistryConfig()" title="Configure registry URL"
+            class="px-2.5 py-2 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border flex items-center gap-1.5 text-xs font-medium transition">
+            <i class="fa-solid fa-gear text-neote-violet"></i>
+            <span class="hidden sm:inline">Registry</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile search row -->
+      <div class="md:hidden px-4 pb-3">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-neote-muted text-xs"></i>
+          <input id="searchInputMobile" type="text" autocomplete="off" spellcheck="false" placeholder="Search packages…"
+            class="w-full bg-neote-panel border border-neote-border focus:border-neote-violet rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-neote-muted/70 focus:outline-none transition" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter / sort sub-bar -->
+    <div class="border-t border-neote-border bg-neote-panel/60">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto">
+        <div id="tagChips" class="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto whitespace-nowrap"></div>
+        <div class="shrink-0 flex items-center gap-1.5">
+          <select id="sortSelect" onchange="renderPackages()"
+            class="bg-neote-surface border border-neote-border rounded-lg px-2.5 py-1.5 text-xs text-neote-text font-medium focus:outline-none focus:border-neote-violet">
+            <option value="name-asc">Name A→Z</option>
+            <option value="name-desc">Name Z→A</option>
+            <option value="version-desc">Newest version</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ MAIN ============ -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+
+    <!-- Status banner (registry source / errors) -->
+    <div id="sourceBanner" class="hidden mb-4 px-3.5 py-2.5 rounded-xl border text-xs flex items-center gap-2"></div>
+
+    <!-- Loading -->
+    <div id="loadingState" class="py-20 text-center">
+      <div class="inline-flex w-12 h-12 rounded-2xl bg-neote-panel border border-neote-border items-center justify-center mb-4">
+        <i class="fa-solid fa-spinner fa-spin text-neote-violet text-lg"></i>
+      </div>
+      <p class="text-neote-muted text-sm">Loading packages from the registry…</p>
+    </div>
+
+    <!-- Error -->
+    <div id="errorState" class="hidden py-16 text-center">
+      <div class="inline-flex w-14 h-14 rounded-2xl bg-red-950/40 border border-red-500/40 items-center justify-center mb-4">
+        <i class="fa-solid fa-triangle-exclamation text-red-400 text-xl"></i>
+      </div>
+      <h3 class="text-white font-semibold mb-1">Could not load the registry</h3>
+      <p id="errorDetail" class="text-neote-muted text-sm mb-4 max-w-md mx-auto"></p>
+      <div class="flex items-center justify-center gap-2 flex-wrap">
+        <button onclick="loadRegistry()" class="px-3.5 py-2 rounded-lg bg-neote-purple hover:bg-purple-600 text-white text-xs font-semibold transition">
+          <i class="fa-solid fa-rotate-right mr-1.5"></i>Retry
+        </button>
+        <button onclick="openRegistryConfig()" class="px-3.5 py-2 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-xs font-medium transition">
+          <i class="fa-solid fa-gear mr-1.5"></i>Configure URL
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty (no matches) -->
+    <div id="emptyState" class="hidden py-16 text-center">
+      <div class="inline-flex w-14 h-14 rounded-2xl bg-neote-panel border border-neote-border items-center justify-center mb-4">
+        <i class="fa-solid fa-magnifying-glass text-neote-muted text-xl"></i>
+      </div>
+      <h3 class="text-white font-semibold mb-1">No packages match your search</h3>
+      <p class="text-neote-muted text-sm">Try a different keyword or clear the filters.</p>
+    </div>
+
+    <!-- Package grid -->
+    <div id="pkgGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </main>
+
+  <footer class="border-t border-neote-border mt-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-xs text-neote-muted flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-1.5">
+        <i class="fa-solid fa-bolt text-neote-violet"></i>
+        <span>Neote Packages — <code class="text-neote-violet">.nep</code> registry browser</span>
+      </div>
+      <div class="font-mono">Host <code class="text-neote-violet">packages.html</code> + <code class="text-neote-violet">pkgs.json</code> together in your GitHub repo.</div>
+    </div>
+  </footer>
+
+  <!-- ============ DETAIL MODAL ============ -->
+  <div id="detailBackdrop" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="detailPanel" class="bg-neote-panel border border-neote-border w-full max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      <!-- Detail header -->
+      <div class="px-4 sm:px-5 py-3.5 border-b border-neote-border flex items-start gap-3 shrink-0">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neote-purple to-fuchsia-600 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-cube text-white text-sm"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 id="detailName" class="text-white font-bold text-base sm:text-lg leading-tight"></h2>
+            <span id="detailVersion" class="px-2 py-0.5 rounded-md bg-neote-surface border border-neote-border text-[10px] font-mono text-neote-violet"></span>
+          </div>
+          <div id="detailMeta" class="text-[11px] text-neote-muted font-mono mt-0.5"></div>
+        </div>
+        <button onclick="closeDetail()" class="w-8 h-8 rounded-lg hover:bg-neote-hover text-neote-muted hover:text-white flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Detail actions -->
+      <div class="px-4 sm:px-5 py-2.5 border-b border-neote-border bg-neote-bg/50 flex items-center gap-2 flex-wrap shrink-0">
+        <button id="detailDownloadBtn" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-neote-purple to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white text-xs font-semibold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-download"></i> Download .nep
+        </button>
+        <button id="detailCopyInstallBtn" class="px-3 py-1.5 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-regular fa-copy text-neote-violet"></i> Copy install
+        </button>
+        <button id="detailCopyEntryBtn" class="px-3 py-1.5 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-code text-sky-400"></i> Copy pkgs.json entry
+        </button>
+        <span id="detailInstallCmd" class="ml-auto text-[11px] font-mono text-neote-muted truncate"></span>
+      </div>
+
+      <!-- Detail body (scrollable) -->
+      <div class="overflow-y-auto flex-1">
+        <!-- Tags -->
+        <div id="detailTags" class="px-4 sm:px-5 pt-3.5 flex items-center gap-1.5 flex-wrap"></div>
+        <!-- Tabs -->
+        <div class="px-4 sm:px-5 pt-3 flex items-center gap-1 border-b border-neote-border">
+          <button id="tabBtnReadme" onclick="setDetailTab('readme')" class="px-3 py-1.5 rounded-t-md text-xs font-medium border-b-2 border-neote-violet text-white">Readme</button>
+          <button id="tabBtnCode" onclick="setDetailTab('code')" class="px-3 py-1.5 rounded-t-md text-xs font-medium border-b-2 border-transparent text-neote-muted hover:text-white">Package code</button>
+        </div>
+        <!-- Readme -->
+        <div id="detailReadme" class="px-4 sm:px-5 py-4 markdown-body"></div>
+        <!-- Code -->
+        <div id="detailCode" class="hidden px-4 sm:px-5 py-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-mono text-neote-muted">package source — runs inside the Neote IDE with a <code class="text-neote-violet">neote</code> API in scope</span>
+            <button onclick="copyText(currentDetail.js, 'Package code copied')" class="px-2 py-1 rounded bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-[11px] flex items-center gap-1.5 transition">
+              <i class="fa-regular fa-copy"></i> Copy
+            </button>
+          </div>
+          <pre class="bg-neote-bg border border-neote-border rounded-xl p-3.5 overflow-x-auto text-xs leading-relaxed"><code id="detailCodePre" class="font-mono text-emerald-300"></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ REGISTRY CONFIG MODAL ============ -->
+  <div id="configBackdrop" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-neote-panel border border-neote-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="px-4 py-3.5 border-b border-neote-border flex items-center justify-between">
+        <h3 class="text-white font-semibold text-sm flex items-center gap-2"><i class="fa-solid fa-gear text-neote-violet"></i> Registry configuration</h3>
+        <button onclick="closeRegistryConfig()" class="w-7 h-7 rounded-lg hover:bg-neote-hover text-neote-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div>
+          <label class="block text-neote-text text-xs font-medium mb-1">pkgs.json URL</label>
+          <input id="configUrlInput" type="text" spellcheck="false"
+            placeholder="https://cdn.jsdelivr.net/gh/USER/REPO@main/pkgs.json"
+            class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none transition" />
+          <p class="text-[11px] text-neote-muted mt-1.5 leading-relaxed">
+            Default is <code class="text-neote-violet">./pkgs.json</code> (same folder as this page). For a GitHub repo use
+            <code class="text-neote-violet">https://cdn.jsdelivr.net/gh/USER/REPO@main/pkgs.json</code> or
+            <code class="text-neote-violet">https://raw.githubusercontent.com/USER/REPO/main/pkgs.json</code>.
+            The file must be public and CORS-accessible.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <button onclick="saveRegistryConfig()" class="px-3.5 py-2 rounded-lg bg-neote-purple hover:bg-purple-600 text-white text-xs font-semibold transition">Save &amp; reload</button>
+          <button onclick="resetRegistryConfig()" class="px-3.5 py-2 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-xs font-medium transition">Reset to ./pkgs.json</button>
+          <a id="configOpenLink" href="#" target="_blank" rel="noopener" class="ml-auto px-3 py-2 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-xs font-medium transition">
+            <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Open JSON
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toastContainer" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2 pointer-events-none"></div>
+
+  <script>
+    "use strict";
+
+    /*************************************************************************
+     * STATE
+     *************************************************************************/
+    let REGISTRY_URL = localStorage.getItem("neote_registry_url") || "./pkgs.json";
+    let ALL_PACKAGES = [];        // full registry entries
+    let FILTERED = [];
+    let activeTag = "all";
+    let currentDetail = null;     // package being viewed
+    let detailTab = "readme";
+
+    /*************************************************************************
+     * UTILITIES
+     *************************************************************************/
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function escapeAttr(s) { return escapeHtml(s).replace(/"/g, "&quot;"); }
+
+    function showToast(msg, type = "info") {
+      const c = document.getElementById("toastContainer");
+      const t = document.createElement("div");
+      const map = {
+        success: "border-emerald-500/60 text-emerald-200",
+        error:   "border-red-500/60 text-red-200",
+        info:    "border-neote-violet/60 text-neote-text"
+      };
+      const ic = {
+        success: '<i class="fa-solid fa-circle-check text-emerald-400"></i>',
+        error:   '<i class="fa-solid fa-circle-exclamation text-red-400"></i>',
+        info:    '<i class="fa-solid fa-circle-info text-neote-violet"></i>'
+      };
+      t.className = `pointer-events-auto bg-neote-panel/95 backdrop-blur-md border ${map[type] || map.info} px-3.5 py-2.5 rounded-xl shadow-2xl text-xs flex items-center gap-2.5 max-w-xs transition-all duration-200`;
+      t.innerHTML = `${ic[type] || ic.info}<span>${escapeHtml(msg)}</span>`;
+      c.appendChild(t);
+      setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateY(8px)"; setTimeout(() => t.remove(), 220); }, 2200);
+    }
+
+    function copyText(text, successMsg) {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); showToast(successMsg || "Copied to clipboard", "success"); }
+      catch (e) { showToast("Copy failed — select and copy manually", "error"); }
+      document.body.removeChild(ta);
+    }
+
+    /*************************************************************************
+     * .nep BUILDER  (structured registry entry  →  sectioned .nep text)
+     *************************************************************************/
+    function buildNepSource(pkg) {
+      const meta = [
+        "name: " + (pkg.name || ""),
+        "version: " + (pkg.version || "0.0.0"),
+        "desc: " + (pkg.desc || ""),
+        "author: " + (pkg.author || "unknown"),
+        "tags: " + (Array.isArray(pkg.tags) ? pkg.tags.join(", ") : (pkg.tags || ""))
+      ].join("\n");
+      return [
+        "---META---",
+        meta,
+        "---JS---",
+        (pkg.js || "").replace(/\s+$/, ""),
+        "---MD---",
+        (pkg.markdown || "").replace(/\s+$/, ""),
+        ""
+      ].join("\n");
+    }
+
+    function downloadNep(pkg) {
+      const text = buildNepSource(pkg);
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = (pkg.name || "package") + ".nep";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast("Downloaded " + a.download, "success");
+    }
+
+    /*************************************************************************
+     * REGISTRY LOADING
+     *************************************************************************/
+    async function loadRegistry() {
+      document.getElementById("loadingState").classList.remove("hidden");
+      document.getElementById("errorState").classList.add("hidden");
+      document.getElementById("pkgGrid").innerHTML = "";
+      hideBanner();
+
+      try {
+        const res = await fetch(REGISTRY_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status + " " + res.statusText);
+        const data = await res.json();
+        const pkgs = Array.isArray(data) ? data : (data.packages || []);
+        if (!pkgs.length) throw new Error("Registry loaded but contains no packages.");
+
+        ALL_PACKAGES = pkgs.map(normalizePkg);
+        document.getElementById("pkgCountText").textContent = ALL_PACKAGES.length;
+        showBanner(REGISTRY_URL, "live");
+        renderTagChips();
+        renderPackages();
+        document.getElementById("loadingState").classList.add("hidden");
+      } catch (err) {
+        document.getElementById("loadingState").classList.add("hidden");
+        document.getElementById("errorState").classList.remove("hidden");
+        document.getElementById("errorDetail").textContent =
+          "Fetch of \"" + REGISTRY_URL + "\" failed: " + (err && err.message ? err.message : err) +
+          ". If you opened this HTML file directly (file://), browsers block fetch — host it on GitHub Pages or run python -m http.server next to pkgs.json.";
+      }
+    }
+
+    function normalizePkg(p) {
+      return {
+        name: p.name || "unnamed",
+        version: p.version || "0.0.0",
+        desc: p.desc || "",
+        author: p.author || "unknown",
+        tags: Array.isArray(p.tags) ? p.tags.map(String) : (p.tags ? String(p.tags).split(",").map(s => s.trim()).filter(Boolean) : []),
+        js: p.js || p.code || "",
+        markdown: p.markdown || p.readme || p.md || "",
+        file: p.file || null
+      };
+    }
+
+    function showBanner(url, kind) {
+      const b = document.getElementById("sourceBanner");
+      const isLocal = url === "./pkgs.json";
+      b.className = "mb-4 px-3.5 py-2.5 rounded-xl border text-xs flex items-center gap-2 " +
+        (kind === "live"
+          ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-200"
+          : "border-amber-500/40 bg-amber-500/5 text-amber-200");
+      const icon = kind === "live" ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>';
+      b.innerHTML = icon +
+        '<span>Registry source: <code class="font-mono">' + escapeHtml(url) + '</code>' +
+        (isLocal ? ' (same folder as this page)' : '') + '</span>' +
+        '<button onclick="openRegistryConfig()" class="ml-auto underline hover:text-white">change</button>';
+      b.classList.remove("hidden");
+    }
+    function hideBanner() { document.getElementById("sourceBanner").classList.add("hidden"); }
+
+    /*************************************************************************
+     * TAGS + RENDERING
+     *************************************************************************/
+    function renderTagChips() {
+      const set = new Set();
+      ALL_PACKAGES.forEach(p => p.tags.forEach(t => set.add(t)));
+      const tags = ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+      const el = document.getElementById("tagChips");
+      el.innerHTML = "";
+      tags.forEach(tag => {
+        const active = tag === activeTag || (activeTag === "all" && tag === "all");
+        const b = document.createElement("button");
+        b.className = "chip px-2.5 py-1 rounded-full text-[11px] font-medium border " +
+          (active
+            ? "bg-neote-purple border-neote-purple text-white"
+            : "bg-neote-surface border-neote-border text-neote-muted hover:text-white hover:border-neote-violet");
+        b.textContent = tag === "all" ? "All tags" : tag;
+        b.onclick = () => { activeTag = tag; renderTagChips(); renderPackages(); };
+        el.appendChild(b);
+      });
+    }
+
+    function getSearch() {
+      return (document.getElementById("searchInput").value || document.getElementById("searchInputMobile").value || "").trim().toLowerCase();
+    }
+
+    function renderPackages() {
+      const q = getSearch();
+      const sort = document.getElementById("sortSelect").value;
+      let list = ALL_PACKAGES.filter(p => {
+        if (activeTag !== "all" && !p.tags.includes(activeTag)) return false;
+        if (!q) return true;
+        return (p.name + " " + p.desc + " " + p.tags.join(" ") + " " + p.author).toLowerCase().includes(q);
+      });
+      list.sort((a, b) => {
+        if (sort === "name-desc") return b.name.localeCompare(a.name);
+        if (sort === "version-desc") return (b.version || "").localeCompare(a.version || "", undefined, { numeric: true });
+        return a.name.localeCompare(b.name);
+      });
+      FILTERED = list;
+
+      const grid = document.getElementById("pkgGrid");
+      const empty = document.getElementById("emptyState");
+      grid.innerHTML = "";
+
+      if (!list.length) { empty.classList.remove("hidden"); return; }
+      empty.classList.add("hidden");
+
+      list.forEach((p, i) => grid.appendChild(cardEl(p, i)));
+    }
+
+    function cardEl(pkg, idx) {
+      const card = document.createElement("div");
+      card.className = "pkg-card fade-up bg-neote-panel border border-neote-border rounded-2xl p-4 flex flex-col cursor-pointer";
+      card.style.animationDelay = Math.min(idx * 30, 240) + "ms";
+      card.onclick = () => openDetail(pkg);
+
+      const tagsHtml = pkg.tags.slice(0, 4).map(t =>
+        '<span class="px-1.5 py-0.5 rounded bg-neote-surface border border-neote-border text-[10px] font-mono text-neote-muted">' + escapeHtml(t) + '</span>'
+      ).join("");
+
+      card.innerHTML =
+        '<div class="flex items-start gap-3 mb-2">' +
+          '<div class="w-9 h-9 rounded-lg bg-gradient-to-br from-neote-purple/30 to-fuchsia-600/20 border border-neote-border flex items-center justify-center shrink-0">' +
+            '<i class="fa-solid fa-cube text-neote-violet text-sm"></i>' +
+          '</div>' +
+          '<div class="flex-1 min-w-0">' +
+            '<div class="flex items-center gap-1.5 flex-wrap">' +
+              '<h3 class="text-white font-semibold text-sm leading-tight truncate">' + escapeHtml(pkg.name) + '</h3>' +
+              '<span class="px-1.5 py-0.5 rounded bg-neote-surface border border-neote-border text-[10px] font-mono text-neote-violet shrink-0">v' + escapeHtml(pkg.version) + '</span>' +
+            '</div>' +
+            '<div class="text-[10px] text-neote-muted font-mono mt-0.5 truncate">by ' + escapeHtml(pkg.author) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<p class="text-xs text-neote-muted line-clamp-3 mb-3 flex-1">' + escapeHtml(pkg.desc) + '</p>' +
+        '<div class="flex items-center gap-1 flex-wrap mb-3 min-h-[18px]">' + tagsHtml + '</div>' +
+        '<div class="flex items-center gap-2 pt-2 border-t border-neote-border">' +
+          '<span class="text-[10px] font-mono text-neote-muted flex-1 truncate"><i class="fa-solid fa-terminal mr-1"></i>neote install ' + escapeHtml(pkg.name) + '</span>' +
+          '<button onclick="event.stopPropagation(); downloadNep(currentDetailFindByRef(this));" data-pkg="' + escapeAttr(pkg.name) + '" title="Download .nep" class="w-7 h-7 rounded-md bg-neote-surface hover:bg-neote-purple hover:text-white text-neote-muted flex items-center justify-center transition">' +
+            '<i class="fa-solid fa-download text-[11px]"></i>' +
+          '</button>' +
+        '</div>';
+      return card;
+    }
+
+    // helper so the inline download button can resolve its package by name
+    window.currentDetailFindByRef = function (btn) {
+      const name = btn.getAttribute("data-pkg");
+      return ALL_PACKAGES.find(p => p.name === name) || FILTERED.find(p => p.name === name);
+    };
+
+    /*************************************************************************
+     * DETAIL VIEW
+     *************************************************************************/
+    function openDetail(pkg) {
+      currentDetail = pkg;
+      detailTab = "readme";
+      document.getElementById("detailName").textContent = pkg.name;
+      document.getElementById("detailVersion").textContent = "v" + pkg.version;
+      document.getElementById("detailMeta").textContent = "by " + pkg.author + " • " + (pkg.js.length) + " chars of JS • " + (pkg.markdown.length) + " chars of docs";
+      document.getElementById("detailInstallCmd").textContent = "neote install " + pkg.name;
+
+      const tagsEl = document.getElementById("detailTags");
+      tagsEl.innerHTML = pkg.tags.map(t =>
+        '<span class="px-2 py-0.5 rounded-full bg-neote-surface border border-neote-border text-[10px] font-mono text-neote-muted">' + escapeHtml(t) + '</span>'
+      ).join("") || '<span class="text-[11px] text-neote-muted">no tags</span>';
+
+      const readmeHtml = (typeof marked !== "undefined" && pkg.markdown)
+        ? marked.parse(pkg.markdown)
+        : (pkg.markdown ? "<pre>" + escapeHtml(pkg.markdown) + "</pre>" : '<p class="text-neote-muted">No readme provided.</p>');
+      document.getElementById("detailReadme").innerHTML = readmeHtml;
+
+      document.getElementById("detailCodePre").textContent = pkg.js || "// (no package code)";
+
+      // wire action buttons
+      const dl = document.getElementById("detailDownloadBtn");
+      dl.onclick = () => downloadNep(pkg);
+      document.getElementById("detailCopyInstallBtn").onclick = () => copyText("neote install " + pkg.name, "Install command copied");
+      document.getElementById("detailCopyEntryBtn").onclick = () => copyText(JSON.stringify(pkg, null, 2), "pkgs.json entry copied");
+
+      setDetailTab("readme");
+      document.getElementById("detailBackdrop").classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    }
+
+    function setDetailTab(tab) {
+      detailTab = tab;
+      const r = document.getElementById("tabBtnReadme"), c = document.getElementById("tabBtnCode");
+      const rv = document.getElementById("detailReadme"), cv = document.getElementById("detailCode");
+      if (tab === "readme") {
+        r.className = "px-3 py-1.5 rounded-t-md text-xs font-medium border-b-2 border-neote-violet text-white";
+        c.className = "px-3 py-1.5 rounded-t-md text-xs font-medium border-b-2 border-transparent text-neote-muted hover:text-white";
+        rv.classList.remove("hidden"); cv.classList.add("hidden");
+      } else {
+        c.className = "px-3 py-1.5 rounded-t-md text-xs font-medium border-b-2 border-neote-violet text-white";
+        r.className = "px-3 py-1.5 rounded-t-md text-xs font-medium border-b-2 border-transparent text-neote-muted hover:text-white";
+        cv.classList.remove("hidden"); rv.classList.add("hidden");
+      }
+    }
+
+    function closeDetail() {
+      document.getElementById("detailBackdrop").classList.add("hidden");
+      document.body.style.overflow = "";
+      currentDetail = null;
+    }
+
+    /*************************************************************************
+     * REGISTRY CONFIG
+     *************************************************************************/
+    function openRegistryConfig() {
+      document.getElementById("configUrlInput").value = REGISTRY_URL;
+      document.getElementById("configOpenLink").href = REGISTRY_URL.startsWith("./") ? "" : REGISTRY_URL;
+      document.getElementById("configBackdrop").classList.remove("hidden");
+    }
+    function closeRegistryConfig() { document.getElementById("configBackdrop").classList.add("hidden"); }
+    function saveRegistryConfig() {
+      const v = document.getElementById("configUrlInput").value.trim();
+      if (!v) { showToast("URL cannot be empty", "error"); return; }
+      REGISTRY_URL = v;
+      localStorage.setItem("neote_registry_url", v);
+      closeRegistryConfig();
+      activeTag = "all";
+      loadRegistry();
+    }
+    function resetRegistryConfig() {
+      REGISTRY_URL = "./pkgs.json";
+      localStorage.removeItem("neote_registry_url");
+      document.getElementById("configUrlInput").value = REGISTRY_URL;
+      closeRegistryConfig();
+      activeTag = "all";
+      loadRegistry();
+    }
+
+    /*************************************************************************
+     * SEARCH WIRING + INIT
+     *************************************************************************/
+    function clearSearch() {
+      document.getElementById("searchInput").value = "";
+      document.getElementById("searchInputMobile").value = "";
+      document.getElementById("clearSearchBtn").classList.add("hidden");
+      renderPackages();
+    }
+    function onSearchInput() {
+      const v = document.getElementById("searchInput").value;
+      document.getElementById("searchInputMobile").value = v;
+      document.getElementById("clearSearchBtn").classList.toggle("hidden", !v);
+      renderPackages();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const si = document.getElementById("searchInput");
+      const sm = document.getElementById("searchInputMobile");
+      si.addEventListener("input", onSearchInput);
+      sm.addEventListener("input", () => {
+        si.value = sm.value;
+        document.getElementById("clearSearchBtn").classList.toggle("hidden", !sm.value);
+        renderPackages();
+      });
+
+      // close modals on backdrop click / Esc
+      document.getElementById("detailBackdrop").addEventListener("click", e => { if (e.target.id === "detailBackdrop") closeDetail(); });
+      document.getElementById("configBackdrop").addEventListener("click", e => { if (e.target.id === "configBackdrop") closeRegistryConfig(); });
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape") { closeDetail(); closeRegistryConfig(); }
+      });
+
+      loadRegistry();
+    });
+  </script>
+</body>
+</html>
