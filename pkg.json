@@ -1,0 +1,84 @@
+{
+  "registry": "neote",
+  "description": "Official Neote package registry. Each entry has name, version, desc, author, tags, js (package source) and markdown (docs).",
+  "updated": "2026-11-23",
+  "installCommand": "neote install <name>",
+  "packages": [
+    {
+      "name": "neote-hello",
+      "version": "1.0.0",
+      "desc": "A minimal demo package that toasts a greeting on enable and adds a clickable status-bar widget. Perfect first package to learn the Neote package API.",
+      "author": "neote",
+      "tags": [
+        "demo",
+        "starter",
+        "toast",
+        "statusbar"
+      ],
+      "js": "// neote-hello — the smallest useful Neote package.\n// The `neote` object is injected into your package scope.\n// Register lifecycle hooks so the IDE can start/stop you cleanly.\n\nneote.onEnable(function () {\n  neote.log(\"neote-hello enabled!\", \"success\");\n  neote.toast(\"Hello from \" + neote.pkg.name + \" v\" + neote.pkg.version, \"success\");\n\n  // Add a clickable widget to the left side of the status bar.\n  neote.statusBar.add({\n    id: \"neote-hello\",\n    position: \"left\",\n    html: '<i class=\"fa-solid fa-hand-sparkles text-neote-violet\"></i>&nbsp;' + neote.pkg.name,\n    title: \"Click to say hello again\",\n    onclick: function () { neote.toast(\"Hello again, developer!\", \"info\"); }\n  });\n});\n\nneote.onDisable(function () {\n  // Anything you added in onEnable should be torn down here.\n  neote.statusBar.remove(\"neote-hello\");\n  neote.log(\"neote-hello disabled\", \"warn\");\n});",
+      "markdown": "# neote-hello\n\n`neote-hello` is the canonical \"first package\" for the Neote IDE. It demonstrates the three things every package should do:\n\n1. **Register lifecycle hooks** with `neote.onEnable` / `neote.onDisable` so the IDE can start and stop you cleanly.\n2. **Talk to the user** through `neote.toast` and `neote.log`.\n3. **Own a piece of UI** through `neote.statusBar.add` and remove it again on disable.\n\n## Install\n\n```\nneote install neote-hello\n```\n\nOr download `neote-hello.nep` from the package browser and open it in the IDE, then click **Install Package**.\n\n## API used\n\n| Method | Purpose |\n| --- | --- |\n| `neote.onEnable(fn)` | Called when the package is toggled on |\n| `neote.onDisable(fn)` | Called when the package is toggled off |\n| `neote.toast(msg, type)` | Show a transient toast (`info` / `success` / `error`) |\n| `neote.log(msg, level)` | Write a line to the Main Terminal |\n| `neote.statusBar.add({id, position, html, title, onclick})` | Add a status-bar widget |\n| `neote.statusBar.remove(id)` | Remove a widget |\n| `neote.pkg` | The parsed package metadata (`name`, `version`, ...) |\n\n## License\n\nMIT — use it as a template for your own packages.",
+      "file": "packages/neote-hello.nep"
+    },
+    {
+      "name": "neote-clock",
+      "version": "1.0.1",
+      "desc": "Adds a live, ticking clock to the right side of the Neote status bar. Updates every second and cleans up its interval timer on disable.",
+      "author": "neote",
+      "tags": [
+        "ui",
+        "statusbar",
+        "time",
+        "clock"
+      ],
+      "js": "// neote-clock — a live clock widget for the status bar.\n// Shows how to use setInterval inside a package and tear it down on disable.\n\nneote.onEnable(function () {\n  neote.log(\"neote-clock enabled\", \"success\");\n\n  var ICON = '<i class=\"fa-regular fa-clock text-neote-violet\"></i>&nbsp;';\n\n  function tick() {\n    var t = new Date().toLocaleTimeString([], { hour12: false });\n    neote.statusBar.update(\"neote-clock\", ICON + t);\n  }\n\n  // Seed the widget immediately so it never shows \"--:--:--\".\n  neote.statusBar.add({\n    id: \"neote-clock\",\n    position: \"right\",\n    html: ICON + \"--:--:--\",\n    title: \"Live clock (updates every second)\"\n  });\n\n  tick();\n  neote._timer = setInterval(tick, 1000);\n});\n\nneote.onDisable(function () {\n  if (neote._timer) clearInterval(neote._timer);\n  neote.statusBar.remove(\"neote-clock\");\n  neote.log(\"neote-clock disabled\", \"warn\");\n});",
+      "markdown": "# neote-clock\n\nA live clock that lives in the Neote IDE status bar. It ticks once per second and demonstrates the most important rule of Neote packages: **clean up after yourself on disable**.\n\n## What it teaches\n\n- Adding a widget with `neote.statusBar.add` to the `right` slot.\n- Updating it in place with `neote.statusBar.update(id, html)` (no flicker, no duplicate widgets).\n- Using `setInterval` and storing the handle on the package-scoped `neote` object so `onDisable` can clear it.\n\n## Install\n\n```\nneote install neote-clock\n```\n\n## Behavior\n\n| State | Status bar |\n| --- | --- |\n| Enabled | `🕐 14:32:07` (updates every second) |\n| Disabled | widget removed, interval cleared |\n\n## Notes\n\nThe `neote` object passed into your package is **instance-scoped** — every enabled package gets its own object, so storing timer handles on `neote._timer` is safe and won't collide with other packages.\n\n## License\n\nMIT",
+      "file": "packages/neote-clock.nep"
+    },
+    {
+      "name": "neote-wordcount",
+      "version": "1.0.0",
+      "desc": "Shows live word and character counts for the active editor in the status bar. Updates on every cursor move and content change.",
+      "author": "neote",
+      "tags": [
+        "editor",
+        "statusbar",
+        "stats",
+        "words"
+      ],
+      "js": "// neote-wordcount — live word/character counts in the status bar.\n// Demonstrates editor event subscriptions (onCursor / onChange) and cleanup.\n\nneote.onEnable(function () {\n  neote.log(\"neote-wordcount enabled\", \"success\");\n\n  var ICON = '<i class=\"fa-solid fa-align-left text-sky-400\"></i>&nbsp;';\n\n  function refresh() {\n    var text = neote.editor.getValue() || \"\";\n    var words = (text.trim().match(/\\S+/g) || []).length;\n    var chars = text.length;\n    neote.statusBar.update(\"neote-wordcount\", ICON + words + \"w / \" + chars + \"c\");\n  }\n\n  neote.statusBar.add({\n    id: \"neote-wordcount\",\n    position: \"right\",\n    html: ICON + \"0w / 0c\",\n    title: \"Words / characters in the active file\"\n  });\n\n  // Each subscription returns an unsubscribe function — call it on disable.\n  neote._cursorSub = neote.editor.onCursor(refresh);\n  neote._changeSub = neote.editor.onChange(refresh);\n  refresh();\n});\n\nneote.onDisable(function () {\n  if (neote._cursorSub) neote._cursorSub();\n  if (neote._changeSub) neote._changeSub();\n  neote.statusBar.remove(\"neote-wordcount\");\n  neote.log(\"neote-wordcount disabled\", \"warn\");\n});",
+      "markdown": "# neote-wordcount\n\nLive word and character counts for whatever file you're editing, shown in the status bar. It updates as you type **and** as you move the cursor.\n\n## What it teaches\n\n- Subscribing to editor events with `neote.editor.onCursor(fn)` and `neote.editor.onChange(fn)`.\n- Each subscription returns an **unsubscribe function** that you must call in `onDisable`.\n- Reading the editor buffer with `neote.editor.getValue()`.\n\n## Install\n\n```\nneote install neote-wordcount\n```\n\n## Example output\n\n```\nalign-left  42w / 318c\n```\n\n## API used\n\n| Method | Purpose |\n| --- | --- |\n| `neote.editor.onCursor(fn)` | Fired on cursor movement; returns an unsub |\n| `neote.editor.onChange(fn)` | Fired on content edits; returns an unsub |\n| `neote.editor.getValue()` | Returns the current editor text |\n| `neote.statusBar.add / update / remove` | Status-bar widget lifecycle |\n\n## License\n\nMIT",
+      "file": "packages/neote-wordcount.nep"
+    },
+    {
+      "name": "neote-themes",
+      "version": "1.2.0",
+      "desc": "Adds a clickable theme switcher to the status bar that cycles the IDE accent color through Purple, Ocean, Forest, Sunset and Rose. Also registers a theme.cycle terminal command.",
+      "author": "neote",
+      "tags": [
+        "ui",
+        "theme",
+        "accent",
+        "statusbar",
+        "command"
+      ],
+      "js": "// neote-themes — cycle the IDE accent color from the status bar or terminal.\n// Demonstrates: clickable widgets, command registration, and DOM attribute theming.\n\nneote.onEnable(function () {\n  neote.log(\"neote-themes enabled\", \"success\");\n\n  var themes = [\n    { id: \"purple\", label: \"Purple\" },\n    { id: \"ocean\",  label: \"Ocean\"  },\n    { id: \"forest\", label: \"Forest\" },\n    { id: \"sunset\", label: \"Sunset\" },\n    { id: \"rose\",   label: \"Rose\"   }\n  ];\n  var idx = 0;\n\n  function apply() {\n    var t = themes[idx];\n    document.documentElement.setAttribute(\"data-neote-theme\", t.id);\n    neote.statusBar.update(\"neote-themes\", '<i class=\"fa-solid fa-palette text-neote-violet\"></i>&nbsp;Theme: ' + t.label);\n    neote.log(\"Theme set to \" + t.label, \"info\");\n  }\n\n  neote.statusBar.add({\n    id: \"neote-themes\",\n    position: \"right\",\n    html: '<i class=\"fa-solid fa-palette text-neote-violet\"></i>&nbsp;Theme: Purple',\n    title: \"Click to cycle the IDE accent theme\",\n    onclick: function () { idx = (idx + 1) % themes.length; apply(); }\n  });\n\n  // Expose the same action as a terminal command:  theme.cycle()\n  neote.command.register(\"theme.cycle\", function () {\n    idx = (idx + 1) % themes.length;\n    apply();\n    return \"Theme: \" + themes[idx].label;\n  }, \"Cycle the IDE accent theme\");\n\n  apply();\n});\n\nneote.onDisable(function () {\n  document.documentElement.removeAttribute(\"data-neote-theme\");\n  neote.command.unregister(\"theme.cycle\");\n  neote.statusBar.remove(\"neote-themes\");\n  neote.log(\"neote-themes disabled (accent reset to Purple)\", \"warn\");\n});",
+      "markdown": "# neote-themes\n\nA theme switcher for the Neote IDE. Click the **palette** widget in the status bar — or run `theme.cycle()` in the terminal — to rotate the IDE accent through five palettes.\n\n## Themes\n\n| id | Name | Accent |\n| --- | --- | --- |\n| `purple` | Purple | `#7c3aed` (default) |\n| `ocean` | Ocean | `#0ea5e9` |\n| `forest` | Forest | `#10b981` |\n| `sunset` | Sunset | `#f59e0b` |\n| `rose` | Rose | `#f43f5e` |\n\n## What it teaches\n\n- Making a **clickable** status-bar widget (`onclick`).\n- Registering a **terminal command** with `neote.command.register(name, handler, desc)` and removing it with `neote.command.unregister(name)`.\n- Driving the IDE look via a `data-neote-theme` attribute on `<html>` (the IDE ships CSS that recolors accent gradients for each value).\n\n## Install\n\n```\nneote install neote-themes\n```\n\n## Usage\n\n- **Status bar**: click the palette icon to cycle.\n- **Terminal**: type `theme.cycle()` and press Enter.\n\nThe theme resets to Purple when the package is disabled.\n\n## License\n\nMIT",
+      "file": "packages/neote-themes.nep"
+    },
+    {
+      "name": "neote-snippets",
+      "version": "0.9.0",
+      "desc": "Registers terminal commands that insert common Neote DOM-loader snippets ($btn, $p, $hd, $input, $div, notify, showcase) at the cursor. Great for fast prototyping.",
+      "author": "neote",
+      "tags": [
+        "productivity",
+        "editor",
+        "snippets",
+        "command"
+      ],
+      "js": "// neote-snippets — type snippet.btn() etc. in the terminal to insert code at the cursor.\n// Demonstrates: batch command registration and neote.editor.insert.\n\nneote.onEnable(function () {\n  neote.log(\"neote-snippets enabled\", \"success\");\n\n  var snippets = {\n    \"snippet.btn\":      '$btn(\"Click me\") /id=\"btn1\" /class=\"primary-btn\"',\n    \"snippet.p\":        '$p(\"Your paragraph text here.\")',\n    \"snippet.hd\":       '$hd(\"Section Title\")',\n    \"snippet.input\":    '$input(\"Placeholder text...\") /id=\"inp1\"',\n    \"snippet.div\":      '$div(\"Container content\") /class=\"box\"',\n    \"snippet.notify\":   'notify(\"Hello from Neote!\")',\n    \"snippet.showcase\": 'showcase(\"Logged value: \" + value);'\n  };\n\n  neote._names = Object.keys(snippets);\n\n  for (var i = 0; i < neote._names.length; i++) {\n    (function (name, text) {\n      neote.command.register(name, function () {\n        neote.editor.insert(text + \"\\n\");\n        return \"Inserted: \" + name;\n      }, \"Insert snippet — \" + text.slice(0, 24));\n    })(neote._names[i], snippets[neote._names[i]]);\n  }\n\n  neote.statusBar.add({\n    id: \"neote-snippets\",\n    position: \"left\",\n    html: '<i class=\"fa-solid fa-code text-amber-300\"></i>&nbsp;Snippets: ' + neote._names.length,\n    title: \"Try snippet.btn(), snippet.p(), snippet.hd() ... in the terminal\"\n  });\n});\n\nneote.onDisable(function () {\n  for (var i = 0; i < neote._names.length; i++) {\n    neote.command.unregister(neote._names[i]);\n  }\n  neote.statusBar.remove(\"neote-snippets\");\n  neote.log(\"neote-snippets disabled\", \"warn\");\n});",
+      "markdown": "# neote-snippets\n\nSpeeds up writing `.neote` files by exposing snippet-inserting terminal commands. Type `snippet.btn()` in the terminal and the corresponding `$btn(...)` line is inserted at the editor cursor.\n\n## Available commands\n\n| Command | Inserts |\n| --- | --- |\n| `snippet.btn()` | `$btn(\"Click me\") /id=\"btn1\" /class=\"primary-btn\"` |\n| `snippet.p()` | `$p(\"Your paragraph text here.\")` |\n| `snippet.hd()` | `$hd(\"Section Title\")` |\n| `snippet.input()` | `$input(\"Placeholder text...\") /id=\"inp1\"` |\n| `snippet.div()` | `$div(\"Container content\") /class=\"box\"` |\n| `snippet.notify()` | `notify(\"Hello from Neote!\")` |\n| `snippet.showcase()` | `showcase(\"Logged value: \" + value);` |\n\n## What it teaches\n\n- Registering **multiple** terminal commands in a loop (note the closure capture).\n- Inserting text at the cursor with `neote.editor.insert(text)`.\n- Tracking registered command names on the package scope so they can all be unregistered on disable.\n\n## Install\n\n```\nneote install neote-snippets\n```\n\n## Tip\n\nCombine with the IDE's autocomplete (Ctrl+Space) — snippets complement, they don't replace it.\n\n## License\n\nMIT",
+      "file": "packages/neote-snippets.nep"
+    }
+  ]
+}
