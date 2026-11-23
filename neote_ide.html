@@ -303,6 +303,48 @@
       background-color: rgba(124, 58, 237, 0.25) !important;
       outline: 1px dashed #a855f7 !important;
     }
+
+    /* ===== Neote Package (.nep) system CSS ===== */
+
+    /* Status-bar widgets injected by enabled packages */
+    #pkgStatusBarLeft, #pkgStatusBarRight { min-width: 0; }
+    .pkg-widget {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 0 6px; height: 18px; border-radius: 6px;
+      background: rgba(28, 24, 44, 0.7); border: 1px solid #2a243d;
+      color: #cfc9e6; font-size: 10.5px; line-height: 1;
+      cursor: default; white-space: nowrap; max-width: 240px;
+      overflow: hidden; text-overflow: ellipsis;
+      transition: border-color .15s ease, background-color .15s ease;
+    }
+    .pkg-widget.clickable { cursor: pointer; }
+    .pkg-widget.clickable:hover { border-color: #7c3aed; background: #241f38; color: #fff; }
+
+    /* Theme accent overrides driven by [data-neote-theme="..."] on <html>.
+       The neote-themes package sets this attribute; class .neote-accent-gradient
+       is applied to the brand logo. #topRunBtn is the Run button. */
+    html[data-neote-theme="ocean"]  .neote-accent-gradient { background-image: linear-gradient(to bottom right, #0ea5e9, #06b6d4) !important; }
+    html[data-neote-theme="forest"] .neote-accent-gradient { background-image: linear-gradient(to bottom right, #10b981, #059669) !important; }
+    html[data-neote-theme="sunset"] .neote-accent-gradient { background-image: linear-gradient(to bottom right, #f59e0b, #ef4444) !important; }
+    html[data-neote-theme="rose"]   .neote-accent-gradient { background-image: linear-gradient(to bottom right, #f43f5e, #ec4899) !important; }
+    html[data-neote-theme="ocean"]  #topRunBtn { background-image: linear-gradient(to right, #0ea5e9, #06b6d4) !important; }
+    html[data-neote-theme="forest"] #topRunBtn { background-image: linear-gradient(to right, #10b981, #059669) !important; }
+    html[data-neote-theme="sunset"] #topRunBtn { background-image: linear-gradient(to right, #f59e0b, #ef4444) !important; }
+    html[data-neote-theme="rose"]   #topRunBtn { background-image: linear-gradient(to right, #f43f5e, #ec4899) !important; }
+
+    /* Packages manager list rows + enable/disable toggle */
+    .pkg-row { transition: border-color .15s ease, background-color .15s ease; }
+    .pkg-row:hover { border-color: #7c3aed; background: #1f1a30; }
+    .pkg-toggle {
+      position: relative; width: 34px; height: 18px; border-radius: 9999px;
+      background: #2a243d; border: 1px solid #2a243d; transition: background-color .15s ease; cursor: pointer; flex-shrink: 0;
+    }
+    .pkg-toggle::after {
+      content: ""; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 9999px;
+      background: #8e86aa; transition: transform .15s ease, background-color .15s ease;
+    }
+    .pkg-toggle.on { background: #7c3aed; border-color: #7c3aed; }
+    .pkg-toggle.on::after { transform: translateX(16px); background: #fff; }
   </style>
 </head>
 <body class="h-screen w-screen flex flex-col bg-neote-bg text-neote-text overflow-hidden">
@@ -312,7 +354,7 @@
     <!-- Left: Brand & Panel Toggles -->
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-neote-purple to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
+        <div class="neote-accent-gradient w-7 h-7 rounded-lg bg-gradient-to-br from-neote-purple to-fuchsia-600 flex items-center justify-center shadow-lg shadow-purple-900/40">
           <i class="fa-solid fa-bolt text-white text-xs"></i>
         </div>
         <span class="font-bold tracking-tight text-sm text-white">NEOTE <span class="text-neote-violet font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-neote-surface border border-neote-border">IDE v1.0</span></span>
@@ -345,6 +387,11 @@
 
     <!-- Right: Primary Execution Controls -->
     <div class="flex items-center gap-1.5">
+      <button onclick="openPackagesManager()" title="Manage Neote packages (.nep) — install, enable/disable, create" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-cubes text-fuchsia-400"></i>
+        <span class="hidden lg:inline">Packages</span>
+        <span id="pkgToggleBadge" class="hidden px-1.5 py-0.5 rounded-full text-[9px] font-mono bg-neote-purple/30 text-neote-violet border border-neote-purple/40">0</span>
+      </button>
       <button onclick="saveActiveFile()" title="Save File (Ctrl+S)" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border flex items-center gap-1.5 transition">
         <i class="fa-solid fa-floppy-disk text-neote-violet"></i>
         <span class="hidden lg:inline">Save</span>
@@ -355,7 +402,7 @@
         <span>Transpile</span>
       </button>
 
-      <button onclick="runActiveFile()" title="Run Code (Ctrl+Enter)" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-neote-purple to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white shadow-md shadow-purple-950/60 flex items-center gap-1.5 transition">
+      <button id="topRunBtn" onclick="runActiveFile()" title="Run Code (Ctrl+Enter)" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-neote-purple to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white shadow-md shadow-purple-950/60 flex items-center gap-1.5 transition">
         <i class="fa-solid fa-play text-[10px]"></i>
         <span>Run</span>
       </button>
@@ -386,7 +433,7 @@
           <button onclick="resetDemoWorkspace()" title="Reset Default Workspace" class="w-6 h-6 rounded hover:bg-neote-hover text-neote-muted hover:text-amber-400 flex items-center justify-center transition">
             <i class="fa-solid fa-rotate text-xs"></i>
           </button>
-          <input type="file" id="deviceFileInput" class="hidden" multiple accept=".txt,.md,.neote" onchange="handleDeviceFileUpload(event)" />
+          <input type="file" id="deviceFileInput" class="hidden" multiple accept=".txt,.md,.neote,.nep" onchange="handleDeviceFileUpload(event)" />
         </div>
       </div>
 
@@ -408,6 +455,7 @@
             <button onclick="setTypeFilter('.neote')" data-filter=".neote" class="type-filter-btn px-1.5 py-0.5 rounded bg-neote-surface text-neote-muted hover:text-white">.neote</button>
             <button onclick="setTypeFilter('.md')" data-filter=".md" class="type-filter-btn px-1.5 py-0.5 rounded bg-neote-surface text-neote-muted hover:text-white">.md</button>
             <button onclick="setTypeFilter('.txt')" data-filter=".txt" class="type-filter-btn px-1.5 py-0.5 rounded bg-neote-surface text-neote-muted hover:text-white">.txt</button>
+            <button onclick="setTypeFilter('.nep')" data-filter=".nep" class="type-filter-btn px-1.5 py-0.5 rounded bg-neote-surface text-neote-muted hover:text-white">.nep</button>
           </div>
           <select id="dateFilterSelect" onchange="renderFileTree()" title="Filter / Sort by Date" class="bg-neote-surface border border-neote-border rounded px-1.5 py-0.5 text-[10px] text-neote-muted focus:outline-none focus:border-neote-violet">
             <option value="default">Tree Order</option>
@@ -489,13 +537,15 @@
           </div>
 
           <!-- Editor Status Strip -->
-          <div class="h-6 bg-neote-panel border-t border-neote-border px-3 flex items-center justify-between text-[11px] font-mono text-neote-muted shrink-0">
-            <div class="flex items-center gap-3">
+          <div class="h-7 bg-neote-panel border-t border-neote-border px-3 flex items-center justify-between text-[11px] font-mono text-neote-muted shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
               <span id="statusLanguageBadge" class="text-neote-violet font-semibold">NEOTE</span>
               <span id="statusCursorPos">Ln 1, Col 1</span>
               <span id="statusSaveState" class="text-emerald-400"><i class="fa-solid fa-check-circle mr-1"></i>Saved</span>
+              <span id="pkgStatusBarLeft" class="flex items-center gap-2 ml-1 min-w-0"></span>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <span id="pkgStatusBarRight" class="flex items-center gap-2 min-w-0"></span>
               <span class="hidden sm:inline text-[10px] text-neote-muted">Ctrl+Space: Autocomplete</span>
               <span>UTF-8</span>
             </div>
@@ -749,6 +799,136 @@
 
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div id="toastContainer" class="fixed bottom-12 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ============================================================ -->
+  <!-- PACKAGES MANAGER MODAL (Installed / Registry / Create)       -->
+  <!-- ============================================================ -->
+  <div id="packagesBackdrop" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-neote-panel border border-neote-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      <!-- Header -->
+      <div class="px-4 py-3 border-b border-neote-border flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-fuchsia-600 to-neote-purple flex items-center justify-center">
+            <i class="fa-solid fa-cubes text-white text-xs"></i>
+          </div>
+          <h3 class="text-white font-semibold text-sm">Neote Packages</h3>
+          <span id="pkgMgrCount" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-neote-surface border border-neote-border text-neote-muted">0 installed</span>
+        </div>
+        <button onclick="closePackagesManager()" class="w-7 h-7 rounded-lg hover:bg-neote-hover text-neote-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Tab bar -->
+      <div class="px-3 py-2 border-b border-neote-border flex items-center gap-1 shrink-0">
+        <button onclick="setPkgTab('installed')" id="pkgTabBtnInstalled" class="pkg-tab-btn px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 bg-neote-surface text-white border border-neote-border">
+          <i class="fa-solid fa-box-open text-neote-violet"></i> Installed
+        </button>
+        <button onclick="setPkgTab('registry')" id="pkgTabBtnRegistry" class="pkg-tab-btn px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 text-neote-muted hover:text-white">
+          <i class="fa-solid fa-cloud-arrow-down text-sky-400"></i> Registry
+        </button>
+        <button onclick="setPkgTab('create')" id="pkgTabBtnCreate" class="pkg-tab-btn px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 text-neote-muted hover:text-white">
+          <i class="fa-solid fa-wand-magic-sparkles text-fuchsia-400"></i> Create .nep
+        </button>
+      </div>
+
+      <!-- Tab: Installed -->
+      <div id="pkgTabInstalled" class="flex-1 overflow-y-auto p-3 space-y-2">
+        <div class="flex items-center gap-2 mb-1">
+          <p class="text-[11px] text-neote-muted flex-1">Toggle a package on to run its code against the Neote API. Toggling off tears down everything it registered.</p>
+          <button onclick="installFromActiveNep()" id="installFromActiveBtn" class="hidden px-2.5 py-1 rounded-md bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-[11px] font-medium transition">
+            <i class="fa-solid fa-file-import mr-1 text-fuchsia-400"></i>Install active .nep
+          </button>
+        </div>
+        <div id="pkgInstalledList" class="space-y-2"></div>
+      </div>
+
+      <!-- Tab: Registry -->
+      <div id="pkgTabRegistry" class="hidden flex-1 overflow-y-auto p-3 space-y-3">
+        <div class="bg-neote-bg border border-neote-border rounded-xl p-3">
+          <label class="block text-neote-text text-xs font-medium mb-1">Registry URL (pkgs.json)</label>
+          <div class="flex items-center gap-2">
+            <input id="pkgRegistryUrl" type="text" spellcheck="false" placeholder="https://cdn.jsdelivr.net/gh/USER/REPO@main/pkgs.json"
+              class="flex-1 bg-neote-panel border border-neote-border focus:border-neote-violet rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" />
+            <button onclick="loadRegistryIntoManager()" class="px-3 py-1.5 rounded-lg bg-neote-purple hover:bg-purple-600 text-white text-xs font-semibold transition">Load</button>
+          </div>
+          <p class="text-[10px] text-neote-muted mt-1.5 leading-relaxed">Use <code class="text-neote-violet">https://cdn.jsdelivr.net/gh/USER/REPO@main/pkgs.json</code> or a raw GitHub URL. If the IDE is opened from <code>file://</code>, fetch may be blocked — use the Create tab or open the IDE via a local server / GitHub Pages.</p>
+        </div>
+        <div id="pkgRegistryList" class="space-y-2"></div>
+      </div>
+
+      <!-- Tab: Create -->
+      <div id="pkgTabCreate" class="hidden flex-1 overflow-y-auto p-3 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-neote-text text-[11px] font-medium mb-1">name</label>
+            <input id="createName" type="text" value="my-package" class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-neote-text text-[11px] font-medium mb-1">version</label>
+            <input id="createVersion" type="text" value="1.0.0" class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-neote-text text-[11px] font-medium mb-1">desc</label>
+            <input id="createDesc" type="text" value="A new Neote package." class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-neote-text text-[11px] font-medium mb-1">author</label>
+            <input id="createAuthor" type="text" value="you" class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-neote-text text-[11px] font-medium mb-1">tags (comma-separated)</label>
+            <input id="createTags" type="text" value="demo,starter" class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-neote-text text-[11px] font-medium mb-1">package JS (runs with a <code class="text-neote-violet">neote</code> API in scope)</label>
+          <textarea id="createJs" rows="7" spellcheck="false" class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-2.5 py-1.5 text-xs font-mono text-emerald-300 focus:outline-none leading-relaxed">neote.onEnable(function () {
+  neote.log("my-package enabled", "success");
+  neote.toast("Hello from my-package!", "success");
+  neote.statusBar.add({ id: "my-pkg", position: "left", html: '<i class="fa-solid fa-cube text-fuchsia-400"></i>&nbsp;my-package', title: "my-package" });
+});
+neote.onDisable(function () {
+  neote.statusBar.remove("my-pkg");
+  neote.log("my-package disabled", "warn");
+});</textarea>
+        </div>
+        <div>
+          <label class="block text-neote-text text-[11px] font-medium mb-1">markdown readme</label>
+          <textarea id="createMd" rows="5" spellcheck="false" class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-2.5 py-1.5 text-xs font-mono text-neote-text focus:outline-none leading-relaxed"># my-package
+
+Describe what your package does here.
+</textarea>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap pt-1">
+          <button onclick="createNepSaveToTree()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-neote-purple to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white text-xs font-semibold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-file-circle-plus"></i> Save as .nep file
+          </button>
+          <button onclick="createNepDownload()" class="px-3 py-1.5 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-xs font-medium flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-download"></i> Download .nep
+          </button>
+          <button onclick="createNepInstall()" class="px-3 py-1.5 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-xs font-medium flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-bolt"></i> Install &amp; enable
+          </button>
+          <button onclick="createNepCopyEntry()" class="px-3 py-1.5 rounded-lg bg-neote-surface hover:bg-neote-hover text-neote-text border border-neote-border text-xs font-medium flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-code text-sky-400"></i> Copy pkgs.json entry
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PACKAGE DOCS MODAL (rendered markdown for an installed/registry package) -->
+  <div id="pkgDocsBackdrop" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-[55] flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-neote-panel border border-neote-border rounded-2xl shadow-2xl w-full max-w-xl max-h-[88vh] flex flex-col overflow-hidden">
+      <div class="px-4 py-3 border-b border-neote-border flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <i class="fa-solid fa-book-open text-neote-violet"></i>
+          <h3 id="pkgDocsTitle" class="text-white font-semibold text-sm truncate">Package readme</h3>
+        </div>
+        <button onclick="closePkgDocs()" class="w-7 h-7 rounded-lg hover:bg-neote-hover text-neote-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="pkgDocsBody" class="overflow-y-auto flex-1 px-4 py-4 markdown-body"></div>
+    </div>
+  </div>
 
   <script>
     /*************************************************************************
@@ -1298,7 +1478,7 @@ ${jsCode}
      *************************************************************************/
 
     const STORAGE_KEY = "neote_tree";
-    const ALLOWED_EXTENSIONS = [".txt", ".md", ".neote"];
+    const ALLOWED_EXTENSIONS = [".txt", ".md", ".neote", ".nep"];
 
     function generateId(prefix = "node") {
       return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
@@ -1524,6 +1704,9 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
       const ext = getFileExtension(filename);
       if (ext === ".neote") {
         return '<i class="fa-solid fa-bolt text-neote-violet text-xs w-4 text-center"></i>';
+      }
+      if (ext === ".nep") {
+        return '<i class="fa-solid fa-cube text-fuchsia-400 text-xs w-4 text-center"></i>';
       }
       if (ext === ".md") {
         return '<i class="fa-brands fa-markdown text-sky-400 text-xs w-4 text-center"></i>';
@@ -1753,10 +1936,10 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
         bodyHtml: `
           <p class="text-neote-muted">Location: <span class="font-mono text-neote-violet">${parentPath}/</span></p>
           <div>
-            <label class="block text-neote-text font-medium mb-1">${type === "file" ? "File Name (.neote, .md, .txt)" : "Folder Name"}</label>
+            <label class="block text-neote-text font-medium mb-1">${type === "file" ? "File Name (.neote, .md, .txt, .nep)" : "Folder Name"}</label>
             <input id="modalNodeNameInput" type="text" placeholder="${type === "file" ? "app.neote" : "components"}" class="w-full bg-neote-bg border border-neote-border focus:border-neote-violet rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none" />
           </div>
-          ${type === "file" ? `<p class="text-[11px] text-neote-muted">Allowed extensions: <code class="text-neote-violet">.neote</code>, <code class="text-sky-400">.md</code>, <code class="text-emerald-400">.txt</code></p>` : ""}
+            ${type === "file" ? `<p class="text-[11px] text-neote-muted">Allowed extensions: <code class="text-neote-violet">.neote</code>, <code class="text-sky-400">.md</code>, <code class="text-emerald-400">.txt</code>, <code class="text-fuchsia-400">.nep</code></p>` : ""}
         `,
         confirmLabel: "Create",
         onConfirm: () => {
@@ -1772,7 +1955,7 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
 
           if (type === "file") {
             if (!isAllowedFileName(rawName)) {
-              const msg = `Unsupported file extension for '${rawName}'. Only .txt, .md, and .neote files are allowed.`;
+              const msg = `Unsupported file extension for '${rawName}'. Only .txt, .md, .neote, and .nep files are allowed.`;
               logToTerminal(msg, "error");
               showToast(msg, "error");
               return false;
@@ -1785,6 +1968,8 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
             const ext = getFileExtension(rawName);
             const starterContent = ext === ".neote"
               ? `// ${rawName}\n$hd("${rawName}")\n$p("Created in Neote IDE")\nshowcase("Loaded ${rawName}");\n`
+              : ext === ".nep"
+              ? `---META---\nname: my-package\nversion: 1.0.0\ndesc: A new Neote package.\nauthor: you\ntags: demo\n---JS---\n// Runs inside the Neote IDE with a 'neote' API in scope.\nneote.onEnable(function () {\n  neote.log("my-package enabled", "success");\n  neote.toast("Hello from my-package!", "success");\n  neote.statusBar.add({ id: "my-pkg", position: "left", html: '<i class="fa-solid fa-cube text-fuchsia-400"></i>&nbsp;my-package', title: "my-package" });\n});\nneote.onDisable(function () {\n  neote.statusBar.remove("my-pkg");\n  neote.log("my-package disabled", "warn");\n});\n---MD---\n# my-package\n\nDescribe what your package does here.\n`
               : ext === ".md"
               ? `# ${rawName.replace(".md", "")}\n\nWrite your Markdown documentation here.\n`
               : `${rawName}\n`;
@@ -1848,7 +2033,7 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
           const newName = document.getElementById("modalRenameInput").value.trim();
           if (!newName || newName === node.name) return true;
           if (node.type === "file" && !isAllowedFileName(newName)) {
-            const msg = `Invalid extension on '${newName}'. Only .txt, .md, and .neote are allowed.`;
+            const msg = `Invalid extension on '${newName}'. Only .txt, .md, .neote, and .nep are allowed.`;
             logToTerminal(msg, "error");
             showToast(msg, "error");
             return false;
@@ -1982,7 +2167,7 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
 
       files.forEach(file => {
         if (!isAllowedFileName(file.name)) {
-          const errMsg = `Rejected upload '${file.name}': Only .txt, .md, and .neote files are supported.`;
+          const errMsg = `Rejected upload '${file.name}': Only .txt, .md, .neote, and .nep files are supported.`;
           logToTerminal(errMsg, "error");
           showToast(errMsg, "error");
           return;
@@ -2066,6 +2251,49 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
       ],
       comment: [
         { regex: /.*?\*\//, token: "comment", next: "start" },
+        { regex: /.*/, token: "comment" }
+      ]
+    });
+
+    // Custom CodeMirror Mode for Neote Package files (.nep)
+    // A .nep file is plain text with ---META---, ---JS--- and ---MD--- sections.
+    CodeMirror.defineSimpleMode("nep", {
+      meta: [
+        // Section header lines:  ---META--- / ---JS--- / ---MD---
+        { regex: /^---[A-Z]+---\s*$/, token: "neote-attr", next: "peek" },
+        // META key: value  (name: ..., version: ..., tags: ...)
+        { regex: /^[a-zA-Z_][\w]*\s*:/, token: "neote-keyword" },
+        { regex: /.*/, token: "comment" }
+      ],
+      peek: [
+        // Decide which section we just entered by looking at the header we matched.
+        // We keep it simple: every header switches the section via a shared state flag.
+        { regex: /^---META---\s*$/, token: "neote-attr", next: "meta" },
+        { regex: /^---JS---\s*$/,   token: "neote-attr", next: "js" },
+        { regex: /^---MD---\s*$/,   token: "neote-attr", next: "md" },
+        { regex: /.*/, token: "comment" }
+      ],
+      js: [
+        { regex: /^---[A-Z]+---\s*$/, token: "neote-attr", next: "peek" },
+        { regex: /\/\/.*/, token: "comment" },
+        { regex: /\b(?:const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|try|catch|finally|throw|async|await|class|extends|import|export|from|typeof|instanceof|true|false|null|undefined)\b/, token: "keyword" },
+        { regex: /\bneote\b/, token: "neote-keyword" },
+        { regex: /"(?:[^\\]|\\.)*?"/, token: "string" },
+        { regex: /'(?:[^\\]|\\.)*?'/, token: "string" },
+        { regex: /`(?:[^\\]|\\.)*?`/, token: "string" },
+        { regex: /\b\d+(?:\.\d+)?\b/, token: "number" },
+        { regex: /[a-zA-Z_$][\w$]*(?=\s*\()/, token: "def" },
+        { regex: /[-+\/*=<>!]+/, token: "operator" }
+      ],
+      md: [
+        { regex: /^---[A-Z]+---\s*$/, token: "neote-attr", next: "peek" },
+        { regex: /^#+\s.*/, token: "neote-keyword" },
+        { regex: /`[^`]*`/, token: "string" },
+        { regex: /\*\*[^*]+\*\*/, token: "def" }
+      ],
+      // The initial state — most .nep files start with ---META---.
+      start: [
+        { regex: /^---[A-Z]+---\s*$/, token: "neote-attr", next: "peek" },
         { regex: /.*/, token: "comment" }
       ]
     });
@@ -2249,8 +2477,8 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
 
       // Set CodeMirror mode based on extension
       const ext = getFileExtension(file.name);
-      const modeMap = { ".neote": "neote", ".md": "markdown", ".txt": "null" };
-      const langLabelMap = { ".neote": "NEOTE", ".md": "MARKDOWN", ".txt": "PLAIN TEXT" };
+      const modeMap = { ".neote": "neote", ".nep": "nep", ".md": "markdown", ".txt": "null" };
+      const langLabelMap = { ".neote": "NEOTE", ".nep": "NEP PKG", ".md": "MARKDOWN", ".txt": "PLAIN TEXT" };
 
       suppressEditorChange = true;
       editor.setOption("mode", modeMap[ext] || "null");
@@ -2264,6 +2492,9 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
       renderEditorTabs();
       renderFileTree();
       updateCodeInfoTab();
+
+      // Notify enabled packages that a file was opened.
+      document.dispatchEvent(new CustomEvent("neote:fileOpen", { detail: file.name }));
 
       if (ext === ".neote") {
         const res = transpile(file.content || "");
@@ -2362,6 +2593,8 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
       if (fileId === activeFileId) {
         updateSaveStatusBadge(true);
       }
+      // Notify enabled packages that a file was saved.
+      document.dispatchEvent(new CustomEvent("neote:fileSave", { detail: file.name }));
     }
 
     function saveActiveFile() {
@@ -2712,6 +2945,42 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
         return;
       }
 
+      // ---- Package CLI commands ----
+      if (trimmed === "packages.list()") {
+        if (!neotePackages.length) { logToTerminal("No packages installed. Use the Packages manager (top bar) or packages.install(\"<name>\").", "info"); return; }
+        neotePackages.forEach(p => {
+          const inst = neoteInstances[p.id];
+          const widgets = inst ? inst.resources.widgets.length : 0;
+          const cmds = inst ? inst.resources.commands.length : 0;
+          logToTerminal(`  ${p.enabled ? "[on] " : "[off]"} ${p.name}  — ${widgets} widget(s), ${cmds} command(s)`, p.enabled ? "success" : "info");
+        });
+        return;
+      }
+      const enableMatch = trimmed.match(/^packages\.enable\(\s*(["'`])([^"'`]+)\1\s*\)$/);
+      if (enableMatch) {
+        const name = enableMatch[2];
+        const pkg = neotePackages.find(p => p.name === name);
+        if (!pkg) { logToTerminal("No installed package named '" + name + "'.", "error"); return; }
+        enablePackage(pkg.id);
+        return;
+      }
+      const disableMatch = trimmed.match(/^packages\.disable\(\s*(["'`])([^"'`]+)\1\s*\)$/);
+      if (disableMatch) {
+        const name = disableMatch[2];
+        const pkg = neotePackages.find(p => p.name === name);
+        if (!pkg) { logToTerminal("No installed package named '" + name + "'.", "error"); return; }
+        disablePackage(pkg.id);
+        return;
+      }
+      const installMatch = trimmed.match(/^packages\.install\(\s*(["'`])([^"'`]+)\1\s*\)$/);
+      if (installMatch) {
+        const name = installMatch[2];
+        const entry = registryCache.find(e => (e.name || "unnamed") === name);
+        if (!entry) { logToTerminal("Package '" + name + "' not found in the loaded registry. Open Packages → Registry and load your pkgs.json first.", "error"); return; }
+        installFromRegistry(name);
+        return;
+      }
+
       switch (trimmed) {
         case "code.clear()":
           clearActiveEditorCode();
@@ -2774,13 +3043,34 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
               "  • terminal.close()        - Collapses/hides the terminal panel",
               "  • terminal.clear()        - Clears terminal console logs",
               '  • terminal.print("text")  - Prints "text" into the terminal output',
-              "  • terminal.help()         - Displays this command reference"
-            ].join("\n"),
+              "  • packages.list()         - Lists installed packages and their status",
+              '  • packages.enable("name") - Enables an installed package',
+              '  • packages.disable("name")- Disables an installed package',
+              '  • packages.install("name")- Installs a package from the loaded registry',
+              "  • terminal.help()         - Displays this command reference",
+              "",
+              "Package-registered commands (only available when their package is enabled):"
+            ].concat(
+              Object.keys(neoteCommands).length
+                ? Object.keys(neoteCommands).map(n => "  • " + n + "()  — " + (neoteCommands[n].desc || "(no description)"))
+                : ["  (none — enable a package like neote-snippets or neote-themes)"]
+            ).join("\n"),
             "system"
           );
           break;
 
         default:
+          // Dispatch to a package-registered command, e.g. theme.cycle() or snippet.btn()
+          const pkgCmdMatch = trimmed.match(/^([a-zA-Z][\w.]*)\(\s*([\s\S]*?)\s*\)$/);
+          if (pkgCmdMatch && neoteCommands[pkgCmdMatch[1]]) {
+            try {
+              const result = neoteCommands[pkgCmdMatch[1]].handler(pkgCmdMatch[2]);
+              if (result != null) logToTerminal(String(result), "output");
+            } catch (e) {
+              logToTerminal("Package command '" + pkgCmdMatch[1] + "' failed: " + e.message, "error");
+            }
+            return;
+          }
           logToTerminal(`Unknown command: '${trimmed}'. Type terminal.help() for available commands.`, "error");
       }
     }
@@ -3151,6 +3441,522 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
 
 
     /*************************************************************************
+     * 6b. NEOTE PACKAGE SYSTEM (.nep files + neote runtime API)
+     *
+     * .nep file format (sectioned plain text):
+     *   ---META---   name: … / version: … / desc: … / author: … / tags: a,b,c
+     *   ---JS---     package source; runs with a `neote` API in scope
+     *   ---MD---     markdown readme
+     *
+     * Each enabled package gets an instance-scoped `neote` context with
+     * onEnable/onDisable, statusBar, command, editor, terminal, toast, log.
+     * Disabling calls the package's onDisable hook and tears down anything it
+     * registered (widgets, commands, editor subscriptions) as a safety net.
+     *************************************************************************/
+
+    const PKG_STORAGE_KEY = "neote_packages";
+    let neotePackages = [];        // [{id, name, source, enabled, installedAt}]
+    let neoteInstances = {};       // id -> { ctx, resources }
+    let neoteCommands = {};        // "name" -> { pkgId, handler, desc }
+    let pkgMgrTab = "installed";
+    let registryCache = [];        // last loaded registry entries
+
+    /* ---------- .nep parser & builder (mirror scripts/build_registry.py) ---------- */
+    function parseNepSource(text) {
+      const sections = { META: "", JS: "", MD: "" };
+      const re = /^---([A-Z]+)---\s*$/gm;
+      const headers = [];
+      let m;
+      while ((m = re.exec(text)) !== null) headers.push({ name: m[1], end: re.lastIndex });
+      for (let i = 0; i < headers.length; i++) {
+        const h = headers[i];
+        const bodyEnd = i + 1 < headers.length ? headers[i + 1].end - (headers[i + 1].name.length + 5) - 1 : text.length;
+        // simpler: slice from this header's end to the next header's start
+      }
+      // Re-slice cleanly using index ranges
+      const idx = [];
+      re.lastIndex = 0;
+      let mm;
+      while ((mm = re.exec(text)) !== null) idx.push({ name: mm[1], start: mm.index, end: re.lastIndex });
+      for (let i = 0; i < idx.length; i++) {
+        const bodyStart = idx[i].end;
+        const bodyEnd = i + 1 < idx.length ? idx[i + 1].start : text.length;
+        const body = text.slice(bodyStart, bodyEnd).replace(/^\n/, "").replace(/\s+$/, "");
+        if (sections.hasOwnProperty(idx[i].name)) sections[idx[i].name] = body;
+      }
+      const meta = {};
+      sections.META.split("\n").forEach(line => {
+        const c = line.indexOf(":");
+        if (c === -1) return;
+        meta[line.slice(0, c).trim().toLowerCase()] = line.slice(c + 1).trim();
+      });
+      const tags = (meta.tags || "").split(",").map(s => s.trim()).filter(Boolean);
+      return {
+        name: meta.name || "unnamed",
+        version: meta.version || "0.0.0",
+        desc: meta.desc || "",
+        author: meta.author || "unknown",
+        tags,
+        js: sections.JS,
+        markdown: sections.MD
+      };
+    }
+
+    function buildNepSource(pkg) {
+      const meta = [
+        "name: " + (pkg.name || ""),
+        "version: " + (pkg.version || "0.0.0"),
+        "desc: " + (pkg.desc || ""),
+        "author: " + (pkg.author || "unknown"),
+        "tags: " + (Array.isArray(pkg.tags) ? pkg.tags.join(", ") : (pkg.tags || ""))
+      ].join("\n");
+      return [
+        "---META---", meta,
+        "---JS---", String(pkg.js || "").replace(/\s+$/, ""),
+        "---MD---", String(pkg.markdown || "").replace(/\s+$/, ""),
+        ""
+      ].join("\n");
+    }
+
+    /* ---------- storage ---------- */
+    function loadNeotePackages() {
+      try {
+        const raw = localStorage.getItem(PKG_STORAGE_KEY);
+        neotePackages = raw ? JSON.parse(raw) : [];
+      } catch (e) { neotePackages = []; }
+      if (!Array.isArray(neotePackages)) neotePackages = [];
+    }
+    function saveNeotePackages() {
+      try { localStorage.setItem(PKG_STORAGE_KEY, JSON.stringify(neotePackages)); }
+      catch (e) { logToTerminal("Package storage error: " + e.message, "error"); }
+    }
+
+    /* ---------- runtime context ---------- */
+    function createNeoteContext(pkg) {
+      const resources = { widgets: [], commands: [], subs: [] };
+      const ctx = {
+        pkg: { name: pkg.name, version: pkg.version, desc: pkg.desc, author: pkg.author, tags: pkg.tags },
+        log: (msg, level) => logToTerminal("[" + pkg.name + "] " + msg, level || "info"),
+        toast: (msg, type) => showToast(msg, type || "info"),
+        onEnable: (fn) => { ctx._onEnable = fn; },
+        onDisable: (fn) => { ctx._onDisable = fn; },
+        statusBar: {
+          add: (opts) => {
+            const id = opts.id || ("w" + Date.now());
+            const slotId = opts.position === "left" ? "pkgStatusBarLeft" : "pkgStatusBarRight";
+            const slot = document.getElementById(slotId);
+            if (!slot) return id;
+            const el = document.createElement("span");
+            el.className = "pkg-widget" + (opts.onclick ? " clickable" : "");
+            el.innerHTML = opts.html || "";
+            if (opts.title) el.title = opts.title;
+            if (opts.onclick) el.addEventListener("click", opts.onclick);
+            slot.appendChild(el);
+            resources.widgets.push({ id, slotId, el });
+            return id;
+          },
+          update: (id, html) => {
+            const w = resources.widgets.find(w => w.id === id);
+            if (w) w.el.innerHTML = html;
+          },
+          remove: (id) => {
+            const i = resources.widgets.findIndex(w => w.id === id);
+            if (i !== -1) { try { resources.widgets[i].el.remove(); } catch (e) {} resources.widgets.splice(i, 1); }
+          }
+        },
+        command: {
+          register: (name, handler, desc) => {
+            if (neoteCommands[name] && neoteCommands[name].pkgId !== pkg.id)
+              logToTerminal("Command '" + name + "' already registered by another package — overwritten.", "warn");
+            neoteCommands[name] = { pkgId: pkg.id, handler, desc: desc || "" };
+            resources.commands.push(name);
+          },
+          unregister: (name) => {
+            if (neoteCommands[name] && neoteCommands[name].pkgId === pkg.id) delete neoteCommands[name];
+          },
+          list: () => Object.keys(neoteCommands)
+        },
+        editor: {
+          getValue: () => editor ? editor.getValue() : "",
+          getFileName: () => { const f = findNodeById(activeFileId); return f ? f.name : ""; },
+          insert: (text) => { if (editor) editor.replaceSelection(text); },
+          onCursor: (fn) => {
+            if (!editor) return () => {};
+            const h = () => fn();
+            editor.on("cursorActivity", h);
+            const unsub = () => editor.off("cursorActivity", h);
+            resources.subs.push(unsub); return unsub;
+          },
+          onChange: (fn) => {
+            if (!editor) return () => {};
+            const h = () => fn();
+            editor.on("change", h);
+            const unsub = () => editor.off("change", h);
+            resources.subs.push(unsub); return unsub;
+          },
+          onOpen: (fn) => {
+            const h = (e) => fn(e.detail);
+            document.addEventListener("neote:fileOpen", h);
+            const unsub = () => document.removeEventListener("neote:fileOpen", h);
+            resources.subs.push(unsub); return unsub;
+          },
+          onSave: (fn) => {
+            const h = () => fn();
+            document.addEventListener("neote:fileSave", h);
+            const unsub = () => document.removeEventListener("neote:fileSave", h);
+            resources.subs.push(unsub); return unsub;
+          }
+        },
+        terminal: {
+          print: (msg) => logToTerminal("[" + pkg.name + "] " + msg, "output"),
+          error: (msg) => logToTerminal("[" + pkg.name + "] " + msg, "error"),
+          clear: () => { document.getElementById("terminalLogOutput").innerHTML = ""; }
+        },
+        _resources: resources
+      };
+      return ctx;
+    }
+
+    function teardownResources(res) {
+      (res.widgets || []).forEach(w => { try { w.el.remove(); } catch (e) {} });
+      res.widgets = [];
+      (res.commands || []).forEach(name => { if (neoteCommands[name]) delete neoteCommands[name]; });
+      res.commands = [];
+      (res.subs || []).forEach(u => { try { u(); } catch (e) {} });
+      res.subs = [];
+    }
+
+    /* ---------- enable / disable / remove ---------- */
+    function enablePackage(pkgId) {
+      const pkg = neotePackages.find(p => p.id === pkgId);
+      if (!pkg) return;
+      if (neoteInstances[pkgId]) { logToTerminal("Package " + pkg.name + " is already enabled.", "warn"); return; }
+      const parsed = parseNepSource(pkg.source);
+      const ctx = createNeoteContext({ id: pkg.id, name: parsed.name, version: parsed.version, desc: parsed.desc, author: parsed.author, tags: parsed.tags });
+      try {
+        const fn = new Function("neote", parsed.js);
+        fn(ctx);
+        if (ctx._onEnable) ctx._onEnable();
+        neoteInstances[pkgId] = { ctx, resources: ctx._resources };
+        pkg.enabled = true;
+        saveNeotePackages();
+        logToTerminal("Enabled package: " + parsed.name + " v" + parsed.version, "success");
+        updatePkgBadge(); renderInstalledPackages();
+      } catch (e) {
+        logToTerminal("Package " + parsed.name + " failed to enable: " + e.message, "error");
+        showToast("Package error: " + e.message, "error");
+        teardownResources(ctx._resources);
+        pkg.enabled = false; saveNeotePackages();
+      }
+    }
+
+    function disablePackage(pkgId) {
+      const pkg = neotePackages.find(p => p.id === pkgId);
+      if (!pkg) return;
+      const inst = neoteInstances[pkgId];
+      if (inst) {
+        try { if (inst.ctx._onDisable) inst.ctx._onDisable(); }
+        catch (e) { logToTerminal("Package onDisable error: " + e.message, "warn"); }
+        teardownResources(inst.resources);
+        delete neoteInstances[pkgId];
+      }
+      pkg.enabled = false; saveNeotePackages();
+      logToTerminal("Disabled package: " + pkg.name, "warn");
+      updatePkgBadge(); renderInstalledPackages();
+    }
+
+    function togglePackage(pkgId) {
+      const pkg = neotePackages.find(p => p.id === pkgId);
+      if (!pkg) return;
+      if (pkg.enabled) disablePackage(pkgId); else enablePackage(pkgId);
+    }
+
+    function removePackage(pkgId) {
+      disablePackage(pkgId);
+      const i = neotePackages.findIndex(p => p.id === pkgId);
+      if (i !== -1) {
+        const name = neotePackages[i].name;
+        neotePackages.splice(i, 1);
+        saveNeotePackages();
+        logToTerminal("Removed package: " + name, "warn");
+        updatePkgBadge(); renderInstalledPackages();
+        if (pkgMgrTab === "registry") renderRegistryList();
+      }
+    }
+
+    /* ---------- install ---------- */
+    function installPackageFromSource(source, enable) {
+      const parsed = parseNepSource(source);
+      if (!parsed.js && !parsed.markdown) { showToast("No JS or MD section found in .nep source", "error"); return null; }
+      const existing = neotePackages.find(p => p.name === parsed.name);
+      let id;
+      if (existing) {
+        if (neoteInstances[existing.id]) disablePackage(existing.id);
+        existing.source = source;
+        existing.version = parsed.version; existing.desc = parsed.desc;
+        existing.author = parsed.author; existing.tags = parsed.tags;
+        id = existing.id;
+        logToTerminal("Updated package: " + parsed.name + " v" + parsed.version, "success");
+        showToast("Updated " + parsed.name, "success");
+      } else {
+        id = generateId("pkg");
+        neotePackages.push({ id, name: parsed.name, version: parsed.version, desc: parsed.desc, author: parsed.author, tags: parsed.tags, source, enabled: false, installedAt: Date.now() });
+        logToTerminal("Installed package: " + parsed.name + " v" + parsed.version, "success");
+        showToast("Installed " + parsed.name, "success");
+      }
+      saveNeotePackages(); updatePkgBadge(); renderInstalledPackages();
+      if (enable) enablePackage(id);
+      return id;
+    }
+
+    function installFromActiveNep() {
+      const file = findNodeById(activeFileId);
+      if (!file || getFileExtension(file.name) !== ".nep") { showToast("Open a .nep file first", "error"); return; }
+      const src = editor ? editor.getValue() : (file.content || "");
+      const id = installPackageFromSource(src, true);
+      if (id) { setPkgTab("installed"); }
+    }
+
+    function installFromRegistry(name) {
+      const entry = registryCache.find(e => (e.name || "unnamed") === name);
+      if (!entry) { showToast("Package not found in registry cache", "error"); return; }
+      const source = buildNepSource(normalizeRegistryEntry(entry));
+      installPackageFromSource(source, true);
+      renderRegistryList();
+    }
+
+    /* ---------- badge ---------- */
+    function updatePkgBadge() {
+      const enabled = neotePackages.filter(p => p.enabled).length;
+      const badge = document.getElementById("pkgToggleBadge");
+      if (badge) {
+        if (enabled > 0) { badge.textContent = enabled; badge.classList.remove("hidden"); }
+        else badge.classList.add("hidden");
+      }
+      const mc = document.getElementById("pkgMgrCount");
+      if (mc) mc.textContent = neotePackages.length + " installed" + (enabled ? " · " + enabled + " on" : "");
+    }
+
+    /* ---------- manager UI ---------- */
+    function openPackagesManager() {
+      document.getElementById("packagesBackdrop").classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+      const file = findNodeById(activeFileId);
+      const btn = document.getElementById("installFromActiveBtn");
+      if (btn) btn.classList.toggle("hidden", !(file && getFileExtension(file.name) === ".nep"));
+      renderInstalledPackages();
+      setPkgTab(pkgMgrTab);
+    }
+    function closePackagesManager() {
+      document.getElementById("packagesBackdrop").classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+    function setPkgTab(tab) {
+      pkgMgrTab = tab;
+      const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+      ["installed","registry","create"].forEach(t => {
+        const btn = document.getElementById("pkgTabBtn" + cap(t));
+        const view = document.getElementById("pkgTab" + cap(t));
+        if (!btn || !view) return;
+        if (t === tab) {
+          btn.className = "pkg-tab-btn px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 bg-neote-surface text-white border border-neote-border";
+          view.classList.remove("hidden");
+        } else {
+          btn.className = "pkg-tab-btn px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 text-neote-muted hover:text-white";
+          view.classList.add("hidden");
+        }
+      });
+      if (tab === "installed") renderInstalledPackages();
+      if (tab === "registry") renderRegistryList();
+    }
+
+    function renderInstalledPackages() {
+      const list = document.getElementById("pkgInstalledList");
+      if (!list) return;
+      updatePkgBadge();
+      if (!neotePackages.length) {
+        list.innerHTML = '<div class="text-center text-xs text-neote-muted py-8">No packages installed yet. Use the <b class="text-neote-text">Registry</b> tab to fetch some, or the <b class="text-neote-text">Create .nep</b> tab to build one.</div>';
+        return;
+      }
+      list.innerHTML = "";
+      neotePackages.forEach(pkg => {
+        const parsed = parseNepSource(pkg.source);
+        const row = document.createElement("div");
+        row.className = "pkg-row bg-neote-bg border border-neote-border rounded-xl p-3 flex items-center gap-3";
+        row.innerHTML =
+          '<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-600/30 to-neote-purple/20 border border-neote-border flex items-center justify-center shrink-0"><i class="fa-solid fa-cube text-fuchsia-400 text-xs"></i></div>' +
+          '<div class="flex-1 min-w-0">' +
+            '<div class="flex items-center gap-1.5 flex-wrap">' +
+              '<span class="text-white font-semibold text-sm truncate">' + escapeHtml(parsed.name) + '</span>' +
+              '<span class="px-1.5 py-0.5 rounded bg-neote-surface border border-neote-border text-[10px] font-mono text-neote-violet">v' + escapeHtml(parsed.version) + '</span>' +
+              (pkg.enabled ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">enabled</span>' : '<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-neote-surface text-neote-muted border border-neote-border">disabled</span>') +
+            '</div>' +
+            '<p class="text-[11px] text-neote-muted mt-0.5 truncate">' + escapeHtml(parsed.desc || "(no description)") + '</p>' +
+          '</div>' +
+          '<div class="flex items-center gap-1.5 shrink-0">' +
+            '<button onclick="openPkgDocs(\'' + pkg.id + '\')" title="View readme" class="w-7 h-7 rounded-md bg-neote-surface hover:bg-neote-hover text-neote-muted hover:text-white flex items-center justify-center transition"><i class="fa-solid fa-book-open text-[11px]"></i></button>' +
+            '<button onclick="removePackage(\'' + pkg.id + '\')" title="Remove" class="w-7 h-7 rounded-md bg-neote-surface hover:bg-red-950/60 text-neote-muted hover:text-red-400 flex items-center justify-center transition"><i class="fa-solid fa-trash text-[11px]"></i></button>' +
+            '<div class="pkg-toggle ' + (pkg.enabled ? "on" : "") + '" onclick="togglePackage(\'' + pkg.id + '\')" title="Enable / disable"></div>' +
+          '</div>';
+        list.appendChild(row);
+      });
+    }
+
+    function normalizeRegistryEntry(e) {
+      return {
+        name: e.name || "unnamed",
+        version: e.version || "0.0.0",
+        desc: e.desc || "",
+        author: e.author || "unknown",
+        tags: Array.isArray(e.tags) ? e.tags.map(String) : (e.tags ? String(e.tags).split(",").map(s => s.trim()).filter(Boolean) : []),
+        js: e.js || e.code || "",
+        markdown: e.markdown || e.readme || e.md || ""
+      };
+    }
+
+    async function loadRegistryIntoManager() {
+      const url = (document.getElementById("pkgRegistryUrl").value || "").trim();
+      if (!url) { showToast("Enter a registry URL", "error"); return; }
+      const list = document.getElementById("pkgRegistryList");
+      list.innerHTML = '<div class="text-center text-xs text-neote-muted py-6"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Loading registry…</div>';
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status + " " + res.statusText);
+        const data = await res.json();
+        registryCache = Array.isArray(data) ? data : (data.packages || []);
+        renderRegistryList();
+        logToTerminal("Loaded registry: " + registryCache.length + " package(s) from " + url, "success");
+      } catch (e) {
+        list.innerHTML = '<div class="text-center text-xs text-red-300 py-6 px-3">Could not fetch <code class="font-mono">' + escapeHtml(url) + '</code>.<br/>' + escapeHtml(e.message) + '<br/><span class="text-neote-muted">If you opened the IDE from file://, the browser blocks fetch. Host the IDE on GitHub Pages or a local server, or use the Create tab.</span></div>';
+        logToTerminal("Registry fetch failed: " + e.message, "error");
+      }
+    }
+
+    function renderRegistryList() {
+      const list = document.getElementById("pkgRegistryList");
+      if (!list) return;
+      if (!registryCache.length) {
+        list.innerHTML = '<div class="text-center text-xs text-neote-muted py-6">No registry loaded. Enter your pkgs.json URL above and click <b class="text-neote-text">Load</b>.<br/><span class="text-[10px]">Default: https://cdn.jsdelivr.net/gh/USER/REPO@main/pkgs.json</span></div>';
+        return;
+      }
+      list.innerHTML = "";
+      registryCache.forEach(entry => {
+        const p = normalizeRegistryEntry(entry);
+        const installed = neotePackages.some(np => np.name === p.name);
+        const row = document.createElement("div");
+        row.className = "pkg-row bg-neote-bg border border-neote-border rounded-xl p-3 flex items-center gap-3";
+        const safeName = p.name.replace(/'/g, "\\'");
+        row.innerHTML =
+          '<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-600/30 to-neote-purple/20 border border-neote-border flex items-center justify-center shrink-0"><i class="fa-solid fa-cloud-arrow-down text-sky-400 text-xs"></i></div>' +
+          '<div class="flex-1 min-w-0">' +
+            '<div class="flex items-center gap-1.5 flex-wrap">' +
+              '<span class="text-white font-semibold text-sm truncate">' + escapeHtml(p.name) + '</span>' +
+              '<span class="px-1.5 py-0.5 rounded bg-neote-surface border border-neote-border text-[10px] font-mono text-neote-violet">v' + escapeHtml(p.version) + '</span>' +
+              '<span class="text-[10px] font-mono text-neote-muted">by ' + escapeHtml(p.author) + '</span>' +
+            '</div>' +
+            '<p class="text-[11px] text-neote-muted mt-0.5">' + escapeHtml(p.desc || "(no description)") + '</p>' +
+          '</div>' +
+          '<div class="shrink-0">' +
+            (installed
+              ? '<span class="px-2 py-1 rounded-md bg-neote-surface border border-neote-border text-[10px] font-mono text-emerald-300">installed</span>'
+              : '<button onclick="installFromRegistry(\'' + safeName + '\')" class="px-2.5 py-1.5 rounded-lg bg-neote-purple hover:bg-purple-600 text-white text-xs font-semibold flex items-center gap-1.5 transition"><i class="fa-solid fa-download"></i> Install</button>') +
+          '</div>';
+        list.appendChild(row);
+      });
+    }
+
+    /* ---------- docs modal ---------- */
+    function openPkgDocs(pkgId) {
+      const pkg = neotePackages.find(p => p.id === pkgId);
+      if (!pkg) return;
+      const parsed = parseNepSource(pkg.source);
+      document.getElementById("pkgDocsTitle").textContent = parsed.name + " v" + parsed.version;
+      const body = document.getElementById("pkgDocsBody");
+      const html = (typeof marked !== "undefined" && parsed.markdown)
+        ? marked.parse(parsed.markdown)
+        : (parsed.markdown ? "<pre>" + escapeHtml(parsed.markdown) + "</pre>" : '<p class="text-neote-muted">No readme provided.</p>');
+      body.innerHTML = html;
+      document.getElementById("pkgDocsBackdrop").classList.remove("hidden");
+    }
+    function closePkgDocs() { document.getElementById("pkgDocsBackdrop").classList.add("hidden"); }
+
+    /* ---------- create wizard ---------- */
+    function readCreateForm() {
+      return {
+        name: (document.getElementById("createName").value || "").trim() || "my-package",
+        version: (document.getElementById("createVersion").value || "").trim() || "0.0.0",
+        desc: (document.getElementById("createDesc").value || "").trim(),
+        author: (document.getElementById("createAuthor").value || "").trim() || "unknown",
+        tags: (document.getElementById("createTags").value || "").split(",").map(s => s.trim()).filter(Boolean),
+        js: document.getElementById("createJs").value || "",
+        markdown: document.getElementById("createMd").value || ""
+      };
+    }
+    function createNepSaveToTree() {
+      const pkg = readCreateForm();
+      const fname = pkg.name.replace(/[^a-zA-Z0-9_\-\.]/g, "-") + ".nep";
+      const source = buildNepSource(pkg);
+      const parent = findNodeById(selectedFolderId) || fileTree;
+      const existing = parent.children.find(c => c.name.toLowerCase() === fname.toLowerCase());
+      if (existing) {
+        existing.content = source; existing.updatedAt = Date.now();
+        saveFileTree(); renderFileTree(); openFile(existing.id);
+        showToast("Updated " + fname, "success"); return;
+      }
+      const now = Date.now();
+      const f = { id: generateId("file"), name: fname, type: "file", createdAt: now, updatedAt: now, content: source };
+      parent.children.push(f); expandedFolders.add(parent.id);
+      saveFileTree(); renderFileTree(); openFile(f.id);
+      showToast("Created " + fname, "success");
+      logToTerminal("Created .nep file: " + getNodePath(f.id), "success");
+    }
+    function createNepDownload() {
+      const pkg = readCreateForm();
+      const source = buildNepSource(pkg);
+      const blob = new Blob([source], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = pkg.name.replace(/[^a-zA-Z0-9_\-\.]/g, "-") + ".nep";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast("Downloaded " + a.download, "success");
+    }
+    function createNepInstall() {
+      const pkg = readCreateForm();
+      const source = buildNepSource(pkg);
+      const id = installPackageFromSource(source, true);
+      if (id) setPkgTab("installed");
+    }
+    function pkgCopyText(text, msg) {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); showToast(msg || "Copied", "success"); }
+      catch (e) { showToast("Copy failed", "error"); }
+      document.body.removeChild(ta);
+    }
+    function createNepCopyEntry() {
+      const pkg = readCreateForm();
+      pkgCopyText(JSON.stringify(pkg, null, 2), "pkgs.json entry copied to clipboard");
+    }
+
+    /* ---------- bootstrap for packages ---------- */
+    function initPackageSystem() {
+      loadNeotePackages();
+      updatePkgBadge();
+      // Re-enable packages that were enabled last session.
+      const toEnable = neotePackages.filter(p => p.enabled).map(p => p.id);
+      toEnable.forEach(id => { const p = neotePackages.find(x => x.id === id); p.enabled = false; enablePackage(id); });
+      logToTerminal("Package system ready: " + neotePackages.length + " installed, " + toEnable.length + " re-enabled.", "system");
+    }
+
+    // Close modals on backdrop click / Esc
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("packagesBackdrop").addEventListener("click", e => { if (e.target.id === "packagesBackdrop") closePackagesManager(); });
+      document.getElementById("pkgDocsBackdrop").addEventListener("click", e => { if (e.target.id === "pkgDocsBackdrop") closePkgDocs(); });
+    });
+
+    /*************************************************************************
      * 7. APPLICATION BOOTSTRAP
      *************************************************************************/
 
@@ -3166,6 +3972,9 @@ Welcome to **Neote IDE**, a sleek dark-purple browser studio featuring a persist
       logToTerminal("Neote IDE v1.0 initialized. Virtual file system mounted at 'neote_tree'.", "system");
       logToTerminal("Type terminal.help() for interactive CLI commands.", "info");
       runActiveFile();
+
+      // Initialize the Neote package system (.nep) and re-enable active packages.
+      initPackageSystem();
     });
   </script>
 </body>
